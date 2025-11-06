@@ -1,0 +1,17 @@
+{
+  "name": "rpg-ai",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "format": "pnpm -r format",
+    "typecheck": "pnpm -r typecheck",
+    "dev": "pnpm --filter backend dev"
+  },
+  "devDependencies": {
+  "@types/node": "^22.5.0",
+  "@types/react": "^19.2.2",
+    "typescript": "^5.6.3"
+  }
+}

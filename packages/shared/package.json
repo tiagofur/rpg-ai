@@ -1,0 +1,17 @@
+{
+  "name": "@rpg-ai/shared",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "echo \"shared lint not configured yet\"",
+    "format": "echo \"shared format not configured yet\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  }
+}
