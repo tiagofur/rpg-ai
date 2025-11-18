@@ -41,8 +41,6 @@ export declare const characterSchema: z.ZodObject<{
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    sessionId: string;
-    playerId: string;
     nombre: string;
     raza: string;
     clase: string;
@@ -51,12 +49,12 @@ export declare const characterSchema: z.ZodObject<{
     inventario: string[];
     estado: string;
     id: string;
+    sessionId: string;
+    playerId: string;
     seed: number;
     createdAt: string;
     updatedAt: string;
 }, {
-    sessionId: string;
-    playerId: string;
     nombre: string;
     raza: string;
     clase: string;
@@ -65,6 +63,8 @@ export declare const characterSchema: z.ZodObject<{
     inventario: string[];
     estado: string;
     id: string;
+    sessionId: string;
+    playerId: string;
     seed: number;
     createdAt: string;
     updatedAt: string;
@@ -95,8 +95,6 @@ export declare const sessionSchema: z.ZodObject<{
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        sessionId: string;
-        playerId: string;
         nombre: string;
         raza: string;
         clase: string;
@@ -105,12 +103,12 @@ export declare const sessionSchema: z.ZodObject<{
         inventario: string[];
         estado: string;
         id: string;
+        sessionId: string;
+        playerId: string;
         seed: number;
         createdAt: string;
         updatedAt: string;
     }, {
-        sessionId: string;
-        playerId: string;
         nombre: string;
         raza: string;
         clase: string;
@@ -119,6 +117,8 @@ export declare const sessionSchema: z.ZodObject<{
         inventario: string[];
         estado: string;
         id: string;
+        sessionId: string;
+        playerId: string;
         seed: number;
         createdAt: string;
         updatedAt: string;
@@ -132,8 +132,6 @@ export declare const sessionSchema: z.ZodObject<{
     title: string;
     currentTurn: number;
     characters: {
-        sessionId: string;
-        playerId: string;
         nombre: string;
         raza: string;
         clase: string;
@@ -142,6 +140,8 @@ export declare const sessionSchema: z.ZodObject<{
         inventario: string[];
         estado: string;
         id: string;
+        sessionId: string;
+        playerId: string;
         seed: number;
         createdAt: string;
         updatedAt: string;
@@ -156,8 +156,6 @@ export declare const sessionSchema: z.ZodObject<{
     title: string;
     currentTurn: number;
     characters: {
-        sessionId: string;
-        playerId: string;
         nombre: string;
         raza: string;
         clase: string;
@@ -166,6 +164,8 @@ export declare const sessionSchema: z.ZodObject<{
         inventario: string[];
         estado: string;
         id: string;
+        sessionId: string;
+        playerId: string;
         seed: number;
         createdAt: string;
         updatedAt: string;
@@ -173,6 +173,83 @@ export declare const sessionSchema: z.ZodObject<{
     summary?: string | undefined;
 }>;
 export type Session = z.infer<typeof sessionSchema>;
+export declare const sessionSummarySchema: z.ZodObject<Omit<{
+    id: z.ZodString;
+    ownerId: z.ZodString;
+    title: z.ZodString;
+    summary: z.ZodOptional<z.ZodString>;
+    seed: z.ZodNumber;
+    currentTurn: z.ZodNumber;
+    createdAt: z.ZodString;
+    updatedAt: z.ZodString;
+    characters: z.ZodArray<z.ZodObject<{
+        nombre: z.ZodString;
+        raza: z.ZodString;
+        clase: z.ZodString;
+        atributos: z.ZodRecord<z.ZodString, z.ZodEnum<["Alta", "Media", "Baja"]>>;
+        habilidades: z.ZodArray<z.ZodString, "many">;
+        inventario: z.ZodArray<z.ZodString, "many">;
+        estado: z.ZodString;
+    } & {
+        id: z.ZodString;
+        sessionId: z.ZodString;
+        playerId: z.ZodString;
+        seed: z.ZodNumber;
+        createdAt: z.ZodString;
+        updatedAt: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        nombre: string;
+        raza: string;
+        clase: string;
+        atributos: Record<string, "Alta" | "Media" | "Baja">;
+        habilidades: string[];
+        inventario: string[];
+        estado: string;
+        id: string;
+        sessionId: string;
+        playerId: string;
+        seed: number;
+        createdAt: string;
+        updatedAt: string;
+    }, {
+        nombre: string;
+        raza: string;
+        clase: string;
+        atributos: Record<string, "Alta" | "Media" | "Baja">;
+        habilidades: string[];
+        inventario: string[];
+        estado: string;
+        id: string;
+        sessionId: string;
+        playerId: string;
+        seed: number;
+        createdAt: string;
+        updatedAt: string;
+    }>, "many">;
+}, "characters"> & {
+    charactersCount: z.ZodNumber;
+}, "strip", z.ZodTypeAny, {
+    id: string;
+    seed: number;
+    createdAt: string;
+    updatedAt: string;
+    ownerId: string;
+    title: string;
+    currentTurn: number;
+    charactersCount: number;
+    summary?: string | undefined;
+}, {
+    id: string;
+    seed: number;
+    createdAt: string;
+    updatedAt: string;
+    ownerId: string;
+    title: string;
+    currentTurn: number;
+    charactersCount: number;
+    summary?: string | undefined;
+}>;
+export type SessionSummary = z.infer<typeof sessionSummarySchema>;
 export declare const createSessionInputSchema: z.ZodObject<{
     ownerId: z.ZodString;
     title: z.ZodString;
@@ -216,8 +293,6 @@ export declare const createSessionResponseSchema: z.ZodObject<{
             createdAt: z.ZodString;
             updatedAt: z.ZodString;
         }, "strip", z.ZodTypeAny, {
-            sessionId: string;
-            playerId: string;
             nombre: string;
             raza: string;
             clase: string;
@@ -226,12 +301,12 @@ export declare const createSessionResponseSchema: z.ZodObject<{
             inventario: string[];
             estado: string;
             id: string;
+            sessionId: string;
+            playerId: string;
             seed: number;
             createdAt: string;
             updatedAt: string;
         }, {
-            sessionId: string;
-            playerId: string;
             nombre: string;
             raza: string;
             clase: string;
@@ -240,6 +315,8 @@ export declare const createSessionResponseSchema: z.ZodObject<{
             inventario: string[];
             estado: string;
             id: string;
+            sessionId: string;
+            playerId: string;
             seed: number;
             createdAt: string;
             updatedAt: string;
@@ -253,8 +330,6 @@ export declare const createSessionResponseSchema: z.ZodObject<{
         title: string;
         currentTurn: number;
         characters: {
-            sessionId: string;
-            playerId: string;
             nombre: string;
             raza: string;
             clase: string;
@@ -263,6 +338,8 @@ export declare const createSessionResponseSchema: z.ZodObject<{
             inventario: string[];
             estado: string;
             id: string;
+            sessionId: string;
+            playerId: string;
             seed: number;
             createdAt: string;
             updatedAt: string;
@@ -277,8 +354,6 @@ export declare const createSessionResponseSchema: z.ZodObject<{
         title: string;
         currentTurn: number;
         characters: {
-            sessionId: string;
-            playerId: string;
             nombre: string;
             raza: string;
             clase: string;
@@ -287,6 +362,8 @@ export declare const createSessionResponseSchema: z.ZodObject<{
             inventario: string[];
             estado: string;
             id: string;
+            sessionId: string;
+            playerId: string;
             seed: number;
             createdAt: string;
             updatedAt: string;
@@ -303,8 +380,6 @@ export declare const createSessionResponseSchema: z.ZodObject<{
         title: string;
         currentTurn: number;
         characters: {
-            sessionId: string;
-            playerId: string;
             nombre: string;
             raza: string;
             clase: string;
@@ -313,6 +388,8 @@ export declare const createSessionResponseSchema: z.ZodObject<{
             inventario: string[];
             estado: string;
             id: string;
+            sessionId: string;
+            playerId: string;
             seed: number;
             createdAt: string;
             updatedAt: string;
@@ -329,8 +406,6 @@ export declare const createSessionResponseSchema: z.ZodObject<{
         title: string;
         currentTurn: number;
         characters: {
-            sessionId: string;
-            playerId: string;
             nombre: string;
             raza: string;
             clase: string;
@@ -339,6 +414,8 @@ export declare const createSessionResponseSchema: z.ZodObject<{
             inventario: string[];
             estado: string;
             id: string;
+            sessionId: string;
+            playerId: string;
             seed: number;
             createdAt: string;
             updatedAt: string;
@@ -347,6 +424,291 @@ export declare const createSessionResponseSchema: z.ZodObject<{
     };
 }>;
 export type CreateSessionResponse = z.infer<typeof createSessionResponseSchema>;
+export declare const listSessionsQuerySchema: z.ZodObject<{
+    ownerId: z.ZodString;
+    cursor: z.ZodOptional<z.ZodString>;
+    limit: z.ZodOptional<z.ZodNumber>;
+}, "strip", z.ZodTypeAny, {
+    ownerId: string;
+    cursor?: string | undefined;
+    limit?: number | undefined;
+}, {
+    ownerId: string;
+    cursor?: string | undefined;
+    limit?: number | undefined;
+}>;
+export type ListSessionsQuery = z.infer<typeof listSessionsQuerySchema>;
+export declare const listSessionsResponseSchema: z.ZodObject<{
+    sessions: z.ZodArray<z.ZodObject<Omit<{
+        id: z.ZodString;
+        ownerId: z.ZodString;
+        title: z.ZodString;
+        summary: z.ZodOptional<z.ZodString>;
+        seed: z.ZodNumber;
+        currentTurn: z.ZodNumber;
+        createdAt: z.ZodString;
+        updatedAt: z.ZodString;
+        characters: z.ZodArray<z.ZodObject<{
+            nombre: z.ZodString;
+            raza: z.ZodString;
+            clase: z.ZodString;
+            atributos: z.ZodRecord<z.ZodString, z.ZodEnum<["Alta", "Media", "Baja"]>>;
+            habilidades: z.ZodArray<z.ZodString, "many">;
+            inventario: z.ZodArray<z.ZodString, "many">;
+            estado: z.ZodString;
+        } & {
+            id: z.ZodString;
+            sessionId: z.ZodString;
+            playerId: z.ZodString;
+            seed: z.ZodNumber;
+            createdAt: z.ZodString;
+            updatedAt: z.ZodString;
+        }, "strip", z.ZodTypeAny, {
+            nombre: string;
+            raza: string;
+            clase: string;
+            atributos: Record<string, "Alta" | "Media" | "Baja">;
+            habilidades: string[];
+            inventario: string[];
+            estado: string;
+            id: string;
+            sessionId: string;
+            playerId: string;
+            seed: number;
+            createdAt: string;
+            updatedAt: string;
+        }, {
+            nombre: string;
+            raza: string;
+            clase: string;
+            atributos: Record<string, "Alta" | "Media" | "Baja">;
+            habilidades: string[];
+            inventario: string[];
+            estado: string;
+            id: string;
+            sessionId: string;
+            playerId: string;
+            seed: number;
+            createdAt: string;
+            updatedAt: string;
+        }>, "many">;
+    }, "characters"> & {
+        charactersCount: z.ZodNumber;
+    }, "strip", z.ZodTypeAny, {
+        id: string;
+        seed: number;
+        createdAt: string;
+        updatedAt: string;
+        ownerId: string;
+        title: string;
+        currentTurn: number;
+        charactersCount: number;
+        summary?: string | undefined;
+    }, {
+        id: string;
+        seed: number;
+        createdAt: string;
+        updatedAt: string;
+        ownerId: string;
+        title: string;
+        currentTurn: number;
+        charactersCount: number;
+        summary?: string | undefined;
+    }>, "many">;
+    nextCursor: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    sessions: {
+        id: string;
+        seed: number;
+        createdAt: string;
+        updatedAt: string;
+        ownerId: string;
+        title: string;
+        currentTurn: number;
+        charactersCount: number;
+        summary?: string | undefined;
+    }[];
+    nextCursor?: string | undefined;
+}, {
+    sessions: {
+        id: string;
+        seed: number;
+        createdAt: string;
+        updatedAt: string;
+        ownerId: string;
+        title: string;
+        currentTurn: number;
+        charactersCount: number;
+        summary?: string | undefined;
+    }[];
+    nextCursor?: string | undefined;
+}>;
+export type ListSessionsResponse = z.infer<typeof listSessionsResponseSchema>;
+export declare const getSessionParamsSchema: z.ZodObject<{
+    id: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    id: string;
+}, {
+    id: string;
+}>;
+export type GetSessionParams = z.infer<typeof getSessionParamsSchema>;
+export declare const getSessionResponseSchema: z.ZodObject<{
+    session: z.ZodObject<{
+        id: z.ZodString;
+        ownerId: z.ZodString;
+        title: z.ZodString;
+        summary: z.ZodOptional<z.ZodString>;
+        seed: z.ZodNumber;
+        currentTurn: z.ZodNumber;
+        createdAt: z.ZodString;
+        updatedAt: z.ZodString;
+        characters: z.ZodArray<z.ZodObject<{
+            nombre: z.ZodString;
+            raza: z.ZodString;
+            clase: z.ZodString;
+            atributos: z.ZodRecord<z.ZodString, z.ZodEnum<["Alta", "Media", "Baja"]>>;
+            habilidades: z.ZodArray<z.ZodString, "many">;
+            inventario: z.ZodArray<z.ZodString, "many">;
+            estado: z.ZodString;
+        } & {
+            id: z.ZodString;
+            sessionId: z.ZodString;
+            playerId: z.ZodString;
+            seed: z.ZodNumber;
+            createdAt: z.ZodString;
+            updatedAt: z.ZodString;
+        }, "strip", z.ZodTypeAny, {
+            nombre: string;
+            raza: string;
+            clase: string;
+            atributos: Record<string, "Alta" | "Media" | "Baja">;
+            habilidades: string[];
+            inventario: string[];
+            estado: string;
+            id: string;
+            sessionId: string;
+            playerId: string;
+            seed: number;
+            createdAt: string;
+            updatedAt: string;
+        }, {
+            nombre: string;
+            raza: string;
+            clase: string;
+            atributos: Record<string, "Alta" | "Media" | "Baja">;
+            habilidades: string[];
+            inventario: string[];
+            estado: string;
+            id: string;
+            sessionId: string;
+            playerId: string;
+            seed: number;
+            createdAt: string;
+            updatedAt: string;
+        }>, "many">;
+    }, "strip", z.ZodTypeAny, {
+        id: string;
+        seed: number;
+        createdAt: string;
+        updatedAt: string;
+        ownerId: string;
+        title: string;
+        currentTurn: number;
+        characters: {
+            nombre: string;
+            raza: string;
+            clase: string;
+            atributos: Record<string, "Alta" | "Media" | "Baja">;
+            habilidades: string[];
+            inventario: string[];
+            estado: string;
+            id: string;
+            sessionId: string;
+            playerId: string;
+            seed: number;
+            createdAt: string;
+            updatedAt: string;
+        }[];
+        summary?: string | undefined;
+    }, {
+        id: string;
+        seed: number;
+        createdAt: string;
+        updatedAt: string;
+        ownerId: string;
+        title: string;
+        currentTurn: number;
+        characters: {
+            nombre: string;
+            raza: string;
+            clase: string;
+            atributos: Record<string, "Alta" | "Media" | "Baja">;
+            habilidades: string[];
+            inventario: string[];
+            estado: string;
+            id: string;
+            sessionId: string;
+            playerId: string;
+            seed: number;
+            createdAt: string;
+            updatedAt: string;
+        }[];
+        summary?: string | undefined;
+    }>;
+}, "strip", z.ZodTypeAny, {
+    session: {
+        id: string;
+        seed: number;
+        createdAt: string;
+        updatedAt: string;
+        ownerId: string;
+        title: string;
+        currentTurn: number;
+        characters: {
+            nombre: string;
+            raza: string;
+            clase: string;
+            atributos: Record<string, "Alta" | "Media" | "Baja">;
+            habilidades: string[];
+            inventario: string[];
+            estado: string;
+            id: string;
+            sessionId: string;
+            playerId: string;
+            seed: number;
+            createdAt: string;
+            updatedAt: string;
+        }[];
+        summary?: string | undefined;
+    };
+}, {
+    session: {
+        id: string;
+        seed: number;
+        createdAt: string;
+        updatedAt: string;
+        ownerId: string;
+        title: string;
+        currentTurn: number;
+        characters: {
+            nombre: string;
+            raza: string;
+            clase: string;
+            atributos: Record<string, "Alta" | "Media" | "Baja">;
+            habilidades: string[];
+            inventario: string[];
+            estado: string;
+            id: string;
+            sessionId: string;
+            playerId: string;
+            seed: number;
+            createdAt: string;
+            updatedAt: string;
+        }[];
+        summary?: string | undefined;
+    };
+}>;
+export type GetSessionResponse = z.infer<typeof getSessionResponseSchema>;
 export declare const createCharacterInputSchema: z.ZodObject<{
     sessionId: z.ZodString;
     playerId: z.ZodString;
@@ -381,8 +743,6 @@ export declare const createCharacterResponseSchema: z.ZodObject<{
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        sessionId: string;
-        playerId: string;
         nombre: string;
         raza: string;
         clase: string;
@@ -391,12 +751,12 @@ export declare const createCharacterResponseSchema: z.ZodObject<{
         inventario: string[];
         estado: string;
         id: string;
+        sessionId: string;
+        playerId: string;
         seed: number;
         createdAt: string;
         updatedAt: string;
     }, {
-        sessionId: string;
-        playerId: string;
         nombre: string;
         raza: string;
         clase: string;
@@ -405,14 +765,14 @@ export declare const createCharacterResponseSchema: z.ZodObject<{
         inventario: string[];
         estado: string;
         id: string;
+        sessionId: string;
+        playerId: string;
         seed: number;
         createdAt: string;
         updatedAt: string;
     }>;
 }, "strip", z.ZodTypeAny, {
     character: {
-        sessionId: string;
-        playerId: string;
         nombre: string;
         raza: string;
         clase: string;
@@ -421,14 +781,14 @@ export declare const createCharacterResponseSchema: z.ZodObject<{
         inventario: string[];
         estado: string;
         id: string;
+        sessionId: string;
+        playerId: string;
         seed: number;
         createdAt: string;
         updatedAt: string;
     };
 }, {
     character: {
-        sessionId: string;
-        playerId: string;
         nombre: string;
         raza: string;
         clase: string;
@@ -437,6 +797,8 @@ export declare const createCharacterResponseSchema: z.ZodObject<{
         inventario: string[];
         estado: string;
         id: string;
+        sessionId: string;
+        playerId: string;
         seed: number;
         createdAt: string;
         updatedAt: string;

@@ -8,7 +8,9 @@ const ATTRIBUTE_LEVELS: AttributeLevel[] = ["Alta", "Media", "Baja"];
 const isAttributeLevel = (value: unknown): value is AttributeLevel =>
   typeof value === "string" && ATTRIBUTE_LEVELS.includes(value as AttributeLevel);
 
-export function serializeCharacter(character: PrismaCharacter): Character {
+type CharacterRecord = Prisma.CharacterGetPayload<{}>;
+
+export function serializeCharacter(character: CharacterRecord): Character {
   const rawAtributos = (character.atributos ?? {}) as Record<string, unknown>;
   const atributos = Object.fromEntries(
     Object.entries(rawAtributos).map(([key, value]) => [
@@ -35,7 +37,6 @@ export function serializeCharacter(character: PrismaCharacter): Character {
 }
 
 type SessionWithCharacters = Prisma.SessionGetPayload<{ include: { characters: true } }>;
-type CharacterRecord = Prisma.CharacterGetPayload<{}>;
 
 export function serializeSession(session: SessionWithCharacters): Session {
   return {
