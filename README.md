@@ -111,10 +111,12 @@ rpg-ai/
 
 ### Requisitos Previos
 - Node.js 20+ 
-- pnpm (recomendado) o yarn
+- pnpm (obligatorio - versión 9.12.0)
 - MongoDB (local o MongoDB Atlas)
 - Cuenta de Expo (gratuita, opcional)
 - GitHub Codespaces habilitado (opcional pero recomendado)
+
+> **Nota**: Este proyecto usa pnpm workspaces. El soporte para yarn está planificado pero actualmente solo pnpm está completamente soportado.
 
 ### Desarrollo Local
 

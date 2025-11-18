@@ -16,7 +16,7 @@ This guide will help you set up the RPG AI project for local development or in G
 ### Local Development
 
 - **Node.js**: Version 20 or higher
-- **Package Manager**: pnpm (recommended) or yarn
+- **Package Manager**: pnpm (required - version 9.12.0)
 - **MongoDB**: Local installation or MongoDB Atlas account
 - **Git**: For version control
 
@@ -24,6 +24,8 @@ This guide will help you set up the RPG AI project for local development or in G
 
 - **Expo Go App**: For testing on physical devices (iOS/Android)
 - **OpenAI API Key**: For AI features (get from https://platform.openai.com/api-keys)
+
+> **Note**: This project uses pnpm workspaces. Yarn support is planned but currently only pnpm is fully supported.
 
 ## Local Development Setup
 
@@ -36,8 +38,6 @@ cd rpg-ai
 
 ### 2. Install Dependencies
 
-#### Using pnpm (Recommended)
-
 ```bash
 # Enable corepack to use the correct pnpm version
 corepack enable
@@ -48,21 +48,6 @@ pnpm install
 # Generate Prisma client
 pnpm prisma:generate
 ```
-
-#### Using yarn
-
-```bash
-# Enable corepack
-corepack enable
-
-# Install all dependencies
-yarn install
-
-# Generate Prisma client
-yarn prisma:generate
-```
-
-> **Note**: The project is configured to use pnpm by default. Yarn should also work, but pnpm is recommended.
 
 ### 3. Configure Environment Variables
 
