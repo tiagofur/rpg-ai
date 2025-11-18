@@ -111,38 +111,71 @@ rpg-ai/
 
 ### Requisitos Previos
 - Node.js 20+ 
-- Yarn o npm
-- Cuenta de Expo (gratuita)
+- pnpm (obligatorio - versión 9.12.0)
+- MongoDB (local o MongoDB Atlas)
+- Cuenta de Expo (gratuita, opcional)
 - GitHub Codespaces habilitado (opcional pero recomendado)
 
+> **Nota**: Este proyecto usa pnpm workspaces. El soporte para yarn está planificado pero actualmente solo pnpm está completamente soportado.
+
 ### Desarrollo Local
+
 ```bash
 # Clonar repositorio
 git clone https://github.com/tiagofur/rpg-ai.git
 cd rpg-ai
 
-# Instalar dependencias
-yarn install
+# Habilitar corepack y instalar dependencias
+corepack enable
+pnpm install
 
-# Iniciar frontend (Expo)
-yarn app:start
+# Configurar variables de entorno
+cp apps/backend/.env.example apps/backend/.env
+# Editar apps/backend/.env con tu configuración
 
-# Iniciar backend (servidor authoritative)
-yarn server:dev
+# Generar Prisma client
+pnpm prisma:generate
+
+# Iniciar backend
+pnpm dev:backend
+
+# En otra terminal, iniciar frontend (web)
+pnpm dev:frontend:web
 ```
 
+**📖 Guía completa**: Ver [docs/DEVELOPMENT_SETUP.md](docs/DEVELOPMENT_SETUP.md) para instrucciones detalladas.
+
 ### Desarrollo en Codespaces
+
 1. Abrir repositorio en GitHub
 2. Click en "Code" → "Codespaces" → "Create codespace on main"
-3. Esperar inicialización del devcontainer
-4. Ejecutar `yarn app:web` para desarrollo web en el navegador
-5. Para testing en dispositivo físico: `yarn app:tunnel` y escanear QR con Expo Go
+3. Esperar inicialización automática del devcontainer
+4. El entorno se configurará automáticamente con:
+   - Node.js 20
+   - pnpm instalado y configurado
+   - Dependencias instaladas
+   - Prisma client generado
+   - VS Code con extensiones recomendadas
+
+#### Ejecutar la aplicación en Codespaces
+
+```bash
+# Iniciar backend (Terminal 1)
+pnpm dev:backend
+
+# Iniciar frontend web (Terminal 2)
+pnpm dev:frontend:web
+```
+
+**📖 Ver más**: [docs/DEVELOPMENT_SETUP.md](docs/DEVELOPMENT_SETUP.md) y [docs/ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md)
 
 ---
 
 ## 📚 Documentación Completa
 
 ### Para Desarrolladores
+- **[Development Setup Guide](docs/DEVELOPMENT_SETUP.md)**: Guía completa de configuración del entorno de desarrollo.
+- **[Environment Variables](docs/ENVIRONMENT_VARIABLES.md)**: Documentación de variables de entorno.
 - **[Game Design Document (GDD)](docs/GDD.md)**: Diseño completo del juego, mecánicas, pilares y visión.
 - **[Stack Tecnológico](docs/TECH_STACK.md)**: Justificación detallada de cada decisión técnica.
 - **[Arquitectura de Sistemas](docs/ARCHITECTURE.md)**: Diagramas, flujos de datos y componentes.

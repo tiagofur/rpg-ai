@@ -7,7 +7,16 @@
     "lint": "pnpm -r lint",
     "format": "pnpm -r format",
     "typecheck": "pnpm -r typecheck",
-    "dev": "pnpm --filter backend dev"
+    "dev": "pnpm --filter backend dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend start",
+    "dev:frontend:web": "pnpm --filter frontend web",
+    "dev:frontend:ios": "pnpm --filter frontend ios",
+    "dev:frontend:android": "pnpm --filter frontend android",
+    "setup": "pnpm install && cd apps/backend && pnpm prisma:generate",
+    "prisma:generate": "cd apps/backend && pnpm prisma:generate",
+    "prisma:push": "cd apps/backend && pnpm db:push",
+    "test": "echo \"Tests not configured yet\""
   },
   "devDependencies": {
   "@types/node": "^22.5.0",

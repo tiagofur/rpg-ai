@@ -1,0 +1,60 @@
+{
+  "name": "RPG AI Development",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "Prisma.prisma",
+        "expo.vscode-expo-tools",
+        "ms-vscode.vscode-typescript-next"
+      ],
+      "settings": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "typescript.tsdk": "node_modules/typescript/lib"
+      }
+    }
+  },
+
+  "postCreateCommand": "corepack enable && pnpm install && cd apps/backend && pnpm prisma:generate",
+
+  "forwardPorts": [3333, 8081, 19000, 19001, 19002],
+
+  "portsAttributes": {
+    "3333": {
+      "label": "Backend API",
+      "onAutoForward": "notify"
+    },
+    "8081": {
+      "label": "Expo Metro",
+      "onAutoForward": "notify"
+    },
+    "19000": {
+      "label": "Expo Dev Tools",
+      "onAutoForward": "openPreview"
+    },
+    "19001": {
+      "label": "Expo iOS",
+      "onAutoForward": "ignore"
+    },
+    "19002": {
+      "label": "Expo Android",
+      "onAutoForward": "ignore"
+    }
+  },
+
+  "remoteUser": "node"
+}
