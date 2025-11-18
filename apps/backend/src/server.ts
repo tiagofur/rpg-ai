@@ -45,6 +45,7 @@ await fastify.register(rateLimit, {
   timeWindow: "1 minute"
 });
 
+fastify.get("/health", async () => ({ status: "ok" }));
 fastify.get("/api/health", async () => ({ status: "ok" }));
 
 await fastify.register(registerSessionRoutes);

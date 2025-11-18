@@ -1,6 +1,51 @@
 ```markdown
 # Especificación técnica MVP (detallada)
 
+## Estructura del Backend
+
+El backend está ubicado en `apps/backend` y utiliza:
+- **Framework**: Fastify con TypeScript
+- **Base de datos**: MongoDB con Prisma ORM
+- **Seguridad**: CORS, Helmet, Rate Limiting
+- **Comunicación en tiempo real**: Socket.IO
+
+### Cómo iniciar el backend
+
+1. **Instalar dependencias** (desde la raíz del proyecto):
+   ```bash
+   pnpm install
+   ```
+
+2. **Generar el cliente de Prisma**:
+   ```bash
+   pnpm prisma:generate
+   ```
+
+3. **Configurar variables de entorno**:
+   - Copiar `.env.example` a `.env` en `apps/backend`
+   - Configurar `DATABASE_URL` con la URL de MongoDB
+   - (Opcional) Configurar `OPENAI_API_KEY` para funcionalidad de IA
+
+4. **Ejecutar en modo desarrollo**:
+   ```bash
+   pnpm dev
+   # o desde la raíz del proyecto
+   pnpm dev:backend
+   ```
+
+5. **Compilar para producción**:
+   ```bash
+   cd apps/backend
+   pnpm build
+   ```
+
+El servidor inicia por defecto en el puerto 3333 (configurable mediante `PORT` en `.env`).
+
+### Endpoints disponibles
+
+- **GET /health** → Healthcheck básico, responde `{ status: "ok" }`
+- **GET /api/health** → Healthcheck de API, responde `{ status: "ok" }`
+
 Endpoints / Mensajes (resumen)
 - POST /api/session/create -> crea una nueva partida / sesión.
 - POST /api/character/create -> crea personaje conversacional.
