@@ -5,7 +5,7 @@ config();
 
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3333),
-  DATABASE_URL: z.string().url("DATABASE_URL debe ser una URL válida"),
+  DATABASE_URL: z.string().url("DATABASE_URL debe ser una URL válida").optional(),
   OPENAI_API_KEY: z.string().optional()
 });
 
