@@ -54,7 +54,7 @@ async function authenticate(request: FastifyRequest, reply: FastifyReply): Promi
     request.tokenPayload = payload;
 
     // Obtener usuario actualizado
-    const user = await authService.userRepository.findById(payload.userId);
+    const user = await request.server.auth.userRepository.findById(payload.userId);
     if (!user) {
       reply.code(401).send({
         error: ErrorCode.UNAUTHORIZED,

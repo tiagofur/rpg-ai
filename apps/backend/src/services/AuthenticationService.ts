@@ -537,4 +537,34 @@ export class AuthenticationService {
   private async sendVerificationEmail(email: string, token: JWT): Promise<void> {
     // Implementar con servicio de email (SendGrid, AWS SES, etc.)
   }
+
+  // Métodos auxiliares que faltaban implementar
+  private async findUserById(userId: UUID): Promise<IAuthUser | null> {
+    try {
+      const user = await this.userRepository.findById(userId);
+      return user;
+    } catch (error) {
+      this.logger.error('Error finding user by ID:', { userId, error });
+      return null;
+    }
+  }
+
+  private async updateLastLogin(userId: UUID): Promise<void> {
+    try {
+      await this.userRepository.updateLastLogin(userId);
+    } catch (error) {
+      this.logger.error('Error updating last login:', { userId, error });
+      // No lanzamos error para no interrumpir el flujo de login
+    }
+  }
+
+  private async getPasswordHash(userId: UUID): Promise<string | null> {
+    try {
+      const hash = await this.userRepository.getPasswordHash(userId);
+      return hash;
+    } catch (error) {
+      this.logger.error('Error getting password hash:', { userId, error });
+      return null;
+    }
+  }
 }

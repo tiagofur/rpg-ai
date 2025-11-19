@@ -1,4 +1,4 @@
-import { IAuthUser, UUID } from '../types';
+import { IAuthUser, UUID, UserRole, AuthStatus } from '../types';
 import { PrismaClient } from '@prisma/client';
 
 export class UserRepository {
@@ -6,6 +6,31 @@ export class UserRepository {
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma;
+  }
+
+  // Método privado para mapear roles de forma segura
+  private mapUserRole(role: string): UserRole {
+    switch (role) {
+      case 'super_admin': return UserRole.SUPER_ADMIN;
+      case 'admin': return UserRole.ADMIN;
+      case 'moderator': return UserRole.MODERATOR;
+      case 'premium_user': return UserRole.PREMIUM_USER;
+      case 'user': return UserRole.USER;
+      case 'guest': return UserRole.GUEST;
+      default: return UserRole.USER; // Valor por defecto seguro
+    }
+  }
+
+  // Método privado para mapear estados de forma segura
+  private mapAuthStatus(status: string): AuthStatus {
+    switch (status) {
+      case 'active': return AuthStatus.ACTIVE;
+      case 'inactive': return AuthStatus.INACTIVE;
+      case 'suspended': return AuthStatus.SUSPENDED;
+      case 'banned': return AuthStatus.BANNED;
+      case 'pending_verification': return AuthStatus.PENDING_VERIFICATION;
+      default: return AuthStatus.INACTIVE; // Valor por defecto seguro
+    }
   }
 
   async findByEmail(email: string): Promise<IAuthUser | null> {
@@ -35,8 +60,8 @@ export class UserRepository {
         id: user.id as UUID,
         email: user.email,
         username: user.username,
-        role: user.role as any,
-        status: user.status as any,
+        role: this.mapUserRole(user.role),
+        status: this.mapAuthStatus(user.status),
         mfaEnabled: user.mfaEnabled,
         mfaSecret: user.mfaSecret || undefined,
         lastLoginAt: user.lastLoginAt || undefined,
