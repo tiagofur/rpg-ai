@@ -539,13 +539,22 @@ export class AuthenticationService {
   }
 
   // Métodos auxiliares que faltaban implementar
-  private async findUserById(userId: UUID): Promise<IAuthUser | null> {
+  async findUserById(userId: UUID): Promise<IAuthUser | null> {
     try {
       const user = await this.userRepository.findById(userId);
       return user;
     } catch (error) {
       this.logger.error('Error finding user by ID:', { userId, error });
       return null;
+    }
+  }
+
+  async updateUserRole(userId: UUID, newRole: UserRole): Promise<void> {
+    try {
+      await this.userRepository.updateRole(userId, newRole);
+    } catch (error) {
+      this.logger.error('Error updating user role:', { userId, newRole, error });
+      throw new AppError('Failed to update user role', ErrorCode.INTERNAL_SERVER_ERROR, 500);
     }
   }
 

@@ -12,6 +12,10 @@ import { env } from "./env";
 import prismaPlugin from "./plugins/prisma";
 import { registerSessionRoutes } from "./routes/session";
 import { registerCharacterRoutes } from "./routes/character";
+import { stripeRoutes } from "./routes/stripe";
+import { PremiumFeaturesService } from "./services/PremiumFeaturesService";
+import { AuthenticationService } from "./services/AuthenticationService";
+import { RedisClient } from "./utils/redis";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -49,6 +53,30 @@ fastify.get("/api/health", async () => ({ status: "ok" }));
 
 await fastify.register(registerSessionRoutes);
 await fastify.register(registerCharacterRoutes);
+
+// Initialize services
+const redis = new RedisClient({
+  host: env.REDIS_HOST,
+  port: env.REDIS_PORT,
+  password: env.REDIS_PASSWORD,
+  db: env.REDIS_DB,
+});
+
+const authService = new AuthenticationService(fastify.prisma, redis);
+
+const premiumService = new PremiumFeaturesService(
+  env.STRIPE_SECRET_KEY,
+  env.STRIPE_WEBHOOK_SECRET,
+  authService,
+  redis
+);
+
+// Register Stripe routes
+await fastify.register(stripeRoutes, {
+  premiumService,
+  authService,
+  redis,
+});
 
 const io = new SocketIOServer(fastify.server, {
   cors: {

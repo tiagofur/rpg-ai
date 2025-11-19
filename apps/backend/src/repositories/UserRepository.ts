@@ -76,6 +76,21 @@ export class UserRepository {
     }
   }
 
+  async updateRole(userId: UUID, newRole: UserRole): Promise<void> {
+    try {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { 
+          role: newRole,
+          updatedAt: new Date()
+        },
+      });
+    } catch (error) {
+      console.error('Error updating user role:', { userId, newRole, error });
+      throw new Error('Failed to update user role');
+    }
+  }
+
   async findById(userId: UUID): Promise<IAuthUser | null> {
     try {
       const user = await this.prisma.user.findUnique({
