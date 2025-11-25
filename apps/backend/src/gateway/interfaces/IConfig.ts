@@ -54,7 +54,7 @@ export interface IServiceConfig {
 
 export interface ILoadBalancingConfig {
   strategy: LoadBalancingStrategy;
-  servers: string[];
+  servers: Array<string>;
   healthCheckEnabled: boolean;
   fallbackEnabled: boolean;
 }
@@ -69,7 +69,7 @@ export interface IServiceAuthConfig {
 export interface IGatewayConfig {
   port: number;
   host: string;
-  services: IServiceConfig[];
+  services: Array<IServiceConfig>;
   globalRateLimit: IRateLimitConfig;
   cors: ICorsConfig;
   security: ISecurityConfig;
@@ -79,10 +79,10 @@ export interface IGatewayConfig {
 }
 
 export interface ICorsConfig {
-  origin: string | string[] | boolean;
-  methods: string[];
-  allowedHeaders: string[];
-  exposedHeaders: string[];
+  origin: string | Array<string> | boolean;
+  methods: Array<string>;
+  allowedHeaders: Array<string>;
+  exposedHeaders: Array<string>;
   credentials: boolean;
   maxAge: number;
   preflightContinue: boolean;

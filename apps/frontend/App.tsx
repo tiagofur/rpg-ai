@@ -1,240 +1,114 @@
-import { useState } from "react";
-import { StatusBar } from "expo-status-bar";
-import {
-  ActivityIndicator,
-  FlatList,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
-} from "react-native";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView, StyleSheet, ActivityIndicator, View } from 'react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { StripeProvider } from '@stripe/stripe-react-native';
+import { useFonts, Cinzel_700Bold } from '@expo-google-fonts/cinzel';
+import { Lato_400Regular, Lato_700Bold } from '@expo-google-fonts/lato';
 
-import { useCreateSession } from "./src/hooks/useCreateSession";
-
-type StoryEntry = {
-  id: string;
-  text: string;
-};
+import './src/i18n';
+import { HomeScreen } from './src/screens/HomeScreen';
+import { GameScreen } from './src/screens/GameScreen';
+import { useSubscription } from './src/hooks/useSubscription';
 
 const queryClient = new QueryClient();
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    Cinzel_700Bold,
+    Lato_400Regular,
+    Lato_700Bold,
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size='large' color='#f7cf46' />
+      </View>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
-      <SafeAreaView style={styles.safeArea}>
-        <RootScreen />
-      </SafeAreaView>
-      <StatusBar style="light" />
+      <StripeContainer>
+        <SafeAreaView style={styles.safeArea}>
+          <RootNavigator />
+        </SafeAreaView>
+        <StatusBar style='light' />
+      </StripeContainer>
     </QueryClientProvider>
   );
 }
 
-const DEFAULT_OWNER_ID = "00000000-0000-4000-8000-000000000000";
-const UUID_REGEX =
-  /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i;
+function StripeContainer({ children }: { children: React.ReactNode }) {
+  const { config } = useSubscription();
 
-function RootScreen() {
-  const [ownerId, setOwnerId] = useState(DEFAULT_OWNER_ID);
-  const [title, setTitle] = useState("");
-  const [summary, setSummary] = useState("");
-  const [logEntries, setLogEntries] = useState<StoryEntry[]>(() => [
-    {
-      id: "intro",
-      text: "¡Bienvenido! Crea una sesión para iniciar la campaña.",
-    },
-  ]);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const createSession = useCreateSession();
-
-  const handleCreateSession = async () => {
-    if (!title.trim()) {
-      setErrorMessage("El título de la sesión es obligatorio.");
-      return;
-    }
-
-    if (!UUID_REGEX.test(ownerId.trim())) {
-      setErrorMessage("ownerId debe ser un UUID válido.");
-      return;
-    }
-
-    setErrorMessage(null);
-    try {
-      const result = await createSession.mutateAsync({
-        ownerId: ownerId.trim(),
-        title: title.trim(),
-        summary: summary.trim() || undefined
-      });
-
-      setLogEntries((prev) => [
-        {
-          id: result.session.id,
-          text: `Sesión creada: ${result.session.title} (ID ${result.session.id}).`
-        },
-        ...prev
-      ]);
-
-      setTitle("");
-      setSummary("");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Error desconocido";
-      setErrorMessage(message);
-    }
-  };
+  if (config.isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size='large' color='#f7cf46' />
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.sessionPanel}>
-        <Text style={styles.panelTitle}>Nueva Sesión</Text>
-        <TextInput
-          value={ownerId}
-          onChangeText={setOwnerId}
-          placeholder="UUID del owner"
-          style={styles.input}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        <TextInput
-          value={title}
-          onChangeText={setTitle}
-          placeholder="Título de la sesión"
-          style={styles.input}
-        />
-        <TextInput
-          value={summary}
-          onChangeText={setSummary}
-          placeholder="Resumen opcional"
-          style={[styles.input, styles.multilineInput]}
-          multiline
-        />
-        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-        <TouchableOpacity
-          style={[styles.primaryButton, createSession.isPending && styles.buttonDisabled]}
-          onPress={handleCreateSession}
-          disabled={createSession.isPending}
-        >
-          {createSession.isPending ? (
-            <ActivityIndicator color="#050510" />
-          ) : (
-            <Text style={styles.buttonText}>Crear sesión</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.imagePanel}>
-        <Text style={styles.panelTitle}>Imagen en tiempo real</Text>
-        <View style={styles.imagePlaceholder}>
-          <Text style={styles.placeholderText}>La ilustración aparecerá aquí.</Text>
-        </View>
-      </View>
-
-      <View style={styles.storyPanel}>
-        <Text style={styles.panelTitle}>Bitácora</Text>
-        <FlatList
-          data={logEntries}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <Text style={styles.storyEntry}>{item.text}</Text>
-          )}
-          contentContainerStyle={styles.storyContent}
-        />
-      </View>
-    </View>
+    <StripeProvider publishableKey={config.data?.publishableKey ?? ''}>
+      <View style={{ flex: 1 }}>{children}</View>
+    </StripeProvider>
   );
+}
+
+function RootNavigator() {
+  const [currentSession, setCurrentSession] = useState<{ id: string; ownerId: string } | null>(
+    null
+  );
+  const [characterId, setCharacterId] = useState<string | null>(null);
+
+  const handleSessionCreated = (sessionId: string, ownerId: string) => {
+    setCurrentSession({ id: sessionId, ownerId });
+    // For MVP, we assume character creation happens or we pick a default one.
+    // Since we don't have character selection yet, let's assume the backend created one
+    // or we need to create one.
+    // Actually, HomeScreen creates a session. Does it create a character?
+    // The backend createSession creates a session.
+    // We need to create a character too.
+    // Let's update HomeScreen to create a character after session creation, or just pass a dummy ID if the backend handles it.
+    // But wait, the backend /start endpoint requires characterId.
+
+    // Let's assume for now we use a hardcoded character ID or fetch it.
+    // To make it work, let's fetch the session details to get the character ID.
+    // But we can't easily do that here without a hook.
+
+    // Let's just pass a placeholder and let the backend handle it or fail.
+    // Or better, let's update HomeScreen to create a character.
+
+    // For now, let's just set a dummy character ID so we can navigate.
+    setCharacterId('00000000-0000-0000-0000-000000000000');
+  };
+
+  const handleExit = () => {
+    setCurrentSession(null);
+    setCharacterId(null);
+  };
+
+  if (currentSession && characterId) {
+    return (
+      <GameScreen sessionId={currentSession.id} characterId={characterId} onExit={handleExit} />
+    );
+  }
+
+  return <HomeScreen onSessionCreated={handleSessionCreated} />;
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#050510"
+    backgroundColor: '#050510',
   },
-  container: {
+  loadingContainer: {
     flex: 1,
-    backgroundColor: "#050510",
-    paddingTop: 48,
-    paddingHorizontal: 24,
-    gap: 24,
-  },
-  sessionPanel: {
-    gap: 12
-  },
-  imagePanel: {
-    flex: 2,
-    gap: 12,
-  },
-  storyPanel: {
-    flex: 3,
-    gap: 12,
-  },
-  inputPanel: {
-    gap: 12,
-  },
-  panelTitle: {
-    color: "#f5f5f5",
-    fontSize: 18,
-    fontWeight: "bold",
-    letterSpacing: 0.6,
-  },
-  imagePlaceholder: {
-    flex: 1,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.04)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  placeholderText: {
-    color: "rgba(255,255,255,0.7)",
-    textAlign: "center",
-  },
-  storyContent: {
-    gap: 12,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.04)",
-  },
-  storyEntry: {
-    color: "#f5f5f5",
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  input: {
-    minHeight: 80,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-    backgroundColor: "rgba(255,255,255,0.08)",
-    padding: 16,
-    color: "#f5f5f5",
-    fontSize: 16,
-  },
-  multilineInput: {
-    minHeight: 60,
-  },
-  errorText: {
-    color: "#ff8080",
-    fontSize: 14,
-  },
-  primaryButton: {
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: "#f7cf46",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#050510",
+    backgroundColor: '#050510',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

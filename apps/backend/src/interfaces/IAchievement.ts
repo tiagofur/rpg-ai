@@ -6,15 +6,15 @@ export interface IAchievement {
   readonly category: AchievementCategory;
   readonly points: number;
   readonly rarity: AchievementRarity | string;
-  readonly requirements?: IAchievementRequirement[];
+  readonly requirements?: Array<IAchievementRequirement>;
   readonly requirement?: number;
-  readonly rewards?: IAchievementReward[];
+  readonly rewards?: Array<IAchievementReward>;
   readonly icon?: string;
   readonly isHidden?: boolean;
   readonly isRepeatable?: boolean;
   readonly maxProgress?: number;
   readonly metadata?: Record<string, any>;
-  readonly conditions?: IAchievementCondition[];
+  readonly conditions?: Array<IAchievementCondition>;
 }
 
 export interface IAchievementProgress {
@@ -49,7 +49,7 @@ export interface IAchievementCondition {
   readonly type: string;
   readonly eventType?: string;
   readonly count?: number;
-  readonly items?: string[];
+  readonly items?: Array<string>;
   readonly statType?: string;
   readonly metadata?: Record<string, any>;
 }
@@ -75,7 +75,8 @@ export enum AchievementCategory {
   CRAFTING = 'crafting',
   SOCIAL = 'social',
   EVENT = 'event',
-  SEASONAL = 'seasonal'
+  SEASONAL = 'seasonal',
+  SPECIAL = 'special'
 }
 
 export enum AchievementRarity {

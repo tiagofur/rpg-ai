@@ -44,7 +44,7 @@ export interface IInventory {
   id: string;
   characterId: string;
   maxSlots: number;
-  items: IInventoryItem[];
+  items: Array<IInventoryItem>;
   weight: number;
   maxWeight: number;
 }
@@ -57,7 +57,7 @@ export interface IInventoryItem {
   equipped: boolean;
   durability: number;
   maxDurability: number;
-  enchantments: IEnchantment[];
+  enchantments: Array<IEnchantment>;
   metadata?: Record<string, any>;
 }
 
@@ -73,14 +73,14 @@ export interface IItem {
   value: number;
   requirements?: IItemRequirements;
   stats?: IItemStats;
-  effects?: IItemEffect[];
+  effects?: Array<IItemEffect>;
   metadata?: Record<string, any>;
   createdAt: Date;
 }
 
 export interface IItemRequirements {
   level: number;
-  class?: CharacterClass[];
+  class?: Array<CharacterClass>;
   attributes?: {
     strength?: number;
     dexterity?: number;
@@ -132,8 +132,8 @@ export interface ICharacterStatus {
   isResting: boolean;
   isMounted: boolean;
   isInvisible: boolean;
-  effects: IActiveEffect[];
-  cooldowns: ICooldown[];
+  effects: Array<IActiveEffect>;
+  cooldowns: Array<ICooldown>;
 }
 
 export interface IActiveEffect {

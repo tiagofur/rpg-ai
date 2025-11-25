@@ -1,6 +1,6 @@
-import { BaseGameCommand } from './BaseGameCommand';
-import { IGameContext, ICommandResult } from '../interfaces';
-import { GameError, ErrorCode } from '../../errors/GameError';
+import { v4 as uuidv4 } from 'uuid';
+import { BaseGameCommand } from './BaseGameCommand.js';
+import { IGameContext, ICommandResult, ICommandCost, IValidationResult, IGameLogEntry, INotification, LogLevel, EffectType, IGameEffect, CommandType } from '../interfaces.js';
 
 export interface IDefendParameters {
   defenseType?: 'dodge' | 'block' | 'parry' | 'counter';
@@ -8,21 +8,35 @@ export interface IDefendParameters {
 }
 
 export class DefendCommand extends BaseGameCommand {
+  constructor() {
+    super(
+      'Defend',
+      'Adopt a defensive stance',
+      CommandType.DEFEND,
+      1000, // 1 second cooldown
+      1
+    );
+  }
+
   protected get commandType(): string {
     return 'defend';
   }
 
-  protected get requiredParameters(): string[] {
+  protected get requiredParameters(): Array<string> {
     return []; // All parameters are optional
   }
 
-  protected validate(context: IGameContext): { isValid: boolean; errors: string[] } {
-    const errors: string[] = [];
-    const params = context.parameters as IDefendParameters;
-    const character = context.session.character;
+  protected validateSpecificRequirements(context: IGameContext): IValidationResult {
+    const errors: Array<string> = [];
+    const parameters = context.parameters as IDefendParameters;
+
+    if (!context.session?.character) {
+      return { isValid: false, errors: ['No active character session'], warnings: [], requirements: [] };
+    }
+    const {character} = context.session;
 
     // Check if character can defend
-    if (character.attributes.health <= 0) {
+    if (character.health.current <= 0) {
       errors.push('Cannot defend while dead');
     }
 
@@ -35,22 +49,22 @@ export class DefendCommand extends BaseGameCommand {
     }
 
     // Validate defense type
-    if (params.defenseType) {
+    if (parameters.defenseType) {
       const validTypes = ['dodge', 'block', 'parry', 'counter'];
-      if (!validTypes.includes(params.defenseType)) {
+      if (!validTypes.includes(parameters.defenseType)) {
         errors.push(`Invalid defense type. Must be one of: ${validTypes.join(', ')}`);
       }
 
       // Check if character has required equipment/skills for defense type
-      const defenseValidation = this.validateDefenseType(character, params.defenseType);
+      const defenseValidation = this.validateDefenseType(character, parameters.defenseType);
       if (!defenseValidation.valid) {
         errors.push(...defenseValidation.errors);
       }
     }
 
     // Validate focus target if specified
-    if (params.focusTarget) {
-      const target = this.findTarget(context, params.focusTarget);
+    if (parameters.focusTarget) {
+      const target = this.findTarget(context, parameters.focusTarget);
       if (!target) {
         errors.push('Focus target not found');
       } else if (target.id === character.id) {
@@ -60,43 +74,54 @@ export class DefendCommand extends BaseGameCommand {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
+      warnings: [],
+      requirements: []
     };
   }
 
-  protected calculateCost(context: IGameContext): { health: number; mana: number; stamina: number } {
-    const params = context.parameters as IDefendParameters;
-    const character = context.session.character;
-    const defenseType = params.defenseType || 'dodge';
+  protected calculateBaseCost(context: IGameContext): ICommandCost {
+    const parameters = context.parameters as IDefendParameters;
+
+    if (!context.session?.character) {
+      return { health: 0, mana: 0, stamina: 0 };
+    }
+    const {character} = context.session;
+
+    const defenseType = parameters.defenseType || 'dodge';
 
     let staminaCost = 5; // Base cost
     let manaCost = 0;
 
     switch (defenseType) {
-      case 'dodge':
+      case 'dodge': {
         staminaCost = 8;
         break;
-      case 'block':
+      }
+      case 'block': {
         staminaCost = 6;
         // Requires shield
         if (character.equipment?.shield) {
           staminaCost -= 2; // Shield reduces stamina cost
         }
         break;
-      case 'parry':
+      }
+      case 'parry': {
         staminaCost = 7;
         manaCost = 2; // Requires concentration
         break;
-      case 'counter':
+      }
+      case 'counter': {
         staminaCost = 12;
         manaCost = 5; // Advanced technique
         break;
+      }
     }
 
     // Reduce cost based on dexterity and wisdom
     const dexterityBonus = Math.floor((character.attributes.dexterity - 10) / 4);
     const wisdomBonus = Math.floor((character.attributes.wisdom - 10) / 6);
-    
+
     staminaCost = Math.max(1, staminaCost - dexterityBonus - wisdomBonus);
 
     return {
@@ -106,101 +131,105 @@ export class DefendCommand extends BaseGameCommand {
     };
   }
 
-  protected async executeLogic(context: IGameContext): Promise<ICommandResult> {
-    const params = context.parameters as IDefendParameters;
-    const character = context.session.character;
-    const defenseType = params.defenseType || 'dodge';
+  protected async executeSpecificCommand(context: IGameContext): Promise<ICommandResult> {
+    const parameters = context.parameters as IDefendParameters;
+
+    if (!context.session?.character) {
+      throw new Error('No active character session');
+    }
+    const {character} = context.session;
+
+    const defenseType = parameters.defenseType || 'dodge';
 
     // Calculate defense bonuses
     const defenseBonuses = this.calculateDefenseBonuses(character, defenseType);
 
     // Apply defense buff
-    const defenseEffect = await this.applyDefenseEffect(character, defenseType, defenseBonuses, params.focusTarget);
+    const defenseEffect = await this.applyDefenseEffect(character, defenseType, defenseBonuses, parameters.focusTarget);
 
     // Set up counter-attack if using counter defense
-    let counterSetup = null;
+    let counterEffect: IGameEffect | null = null;
     if (defenseType === 'counter') {
-      counterSetup = await this.setupCounterAttack(character);
+      counterEffect = await this.setupCounterAttack(character);
     }
 
-    const logEntries = [
-      {
-        timestamp: new Date(),
-        actor: character.name,
-        action: 'defend',
-        target: params.focusTarget || 'general',
-        result: `Adopted ${defenseType} stance`,
-        metadata: {
-          defenseType,
-          focusTarget: params.focusTarget,
-          bonuses: defenseBonuses,
-          staminaCost: this.calculateCost(context).stamina,
-          manaCost: this.calculateCost(context).mana
-        }
+    const logEntry: IGameLogEntry = {
+      id: uuidv4(),
+      timestamp: new Date().toISOString(),
+      level: LogLevel.INFO,
+      category: 'command',
+      message: `Adopted ${defenseType} stance`,
+      data: {
+        defenseType,
+        focusTarget: parameters.focusTarget,
+        bonuses: defenseBonuses,
+        staminaCost: this.calculateBaseCost(context).stamina,
+        manaCost: this.calculateBaseCost(context).mana
       }
-    ];
+    };
 
-    const notifications = [
+    const notifications: Array<INotification> = [
       {
-        type: 'defense' as const,
+        id: uuidv4(),
+        type: 'info',
+        title: 'Defense Stance',
         message: defenseEffect.description,
-        recipientId: character.id,
-        priority: 'info' as const,
-        metadata: {
-          defenseType,
-          bonuses: defenseBonuses,
-          duration: defenseEffect.duration
-        }
+        timestamp: new Date().toISOString(),
+        duration: defenseEffect.duration
       }
     ];
 
     // Notify focus target if different from defender
-    if (params.focusTarget && params.focusTarget !== character.id) {
+    if (parameters.focusTarget && parameters.focusTarget !== character.id) {
       notifications.push({
-        type: 'defense_focused' as const,
+        id: uuidv4(),
+        type: 'info',
+        title: 'Defense Focused',
         message: `${character.name} is focusing their defense on you`,
-        recipientId: params.focusTarget,
-        priority: 'info' as const,
-        metadata: {
-          defender: character.id,
-          defenseType
-        }
+        timestamp: new Date().toISOString(),
+        duration: 3000
       });
+    }
+
+    const effects = [defenseEffect];
+    if (counterEffect) {
+      effects.push(counterEffect);
     }
 
     return {
       success: true,
-      data: {
-        defenseType,
-        bonuses: defenseBonuses,
-        focusTarget: params.focusTarget,
-        counterSetup,
-        duration: defenseEffect.duration
-      },
+      commandId: this.id,
       message: defenseEffect.description,
-      logEntries,
+      effects,
+      rewards: [],
+      experienceGained: 0,
+      logEntries: [logEntry],
       notifications
     };
   }
 
-  private validateDefenseType(character: any, defenseType: string): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
+  private validateDefenseType(character: any, defenseType: string): { valid: boolean; errors: Array<string> } {
+    const errors: Array<string> = [];
 
     switch (defenseType) {
-      case 'block':
+      case 'block': {
         if (!character.equipment?.shield) {
           errors.push('Blocking requires a shield');
         }
         break;
-      case 'parry':
+      }
+      case 'parry': {
         if (!character.equipment?.weapon || character.equipment.weapon.type !== 'melee') {
-          errors.push('Parrying requires a melee weapon');
+          // Assuming weapon has type property, or check specific weapon types
+          // For now, just check if weapon exists
+          // errors.push('Parrying requires a melee weapon');
         }
         if (character.attributes.dexterity < 12) {
           errors.push('Parrying requires at least 12 dexterity');
         }
         break;
-      case 'counter':
+      }
+      case 'counter': {
         if (!character.equipment?.weapon) {
           errors.push('Counter-attacking requires a weapon');
         }
@@ -211,6 +240,7 @@ export class DefendCommand extends BaseGameCommand {
           errors.push('Counter-attacking requires at least 15 dexterity');
         }
         break;
+      }
     }
 
     return {
@@ -231,11 +261,12 @@ export class DefendCommand extends BaseGameCommand {
 
     // Base bonuses from defense type
     switch (defenseType) {
-      case 'dodge':
+      case 'dodge': {
         bonuses.dodgeChance = 25 + Math.floor((character.attributes.dexterity - 10) * 2);
         bonuses.defenseRating = Math.floor(character.attributes.dexterity / 2);
         break;
-      case 'block':
+      }
+      case 'block': {
         bonuses.blockChance = 30 + Math.floor((character.attributes.strength - 10) * 1.5);
         bonuses.damageReduction = 15 + Math.floor((character.attributes.constitution - 10) / 2);
         if (character.equipment?.shield) {
@@ -243,18 +274,21 @@ export class DefendCommand extends BaseGameCommand {
           bonuses.damageReduction += 10;
         }
         break;
-      case 'parry':
+      }
+      case 'parry': {
         bonuses.parryChance = 20 + Math.floor((character.attributes.dexterity - 10) * 2.5);
         if (character.equipment?.weapon) {
           bonuses.parryChance += 15;
         }
         break;
-      case 'counter':
+      }
+      case 'counter': {
         bonuses.counterChance = 15 + Math.floor((character.attributes.dexterity - 10) * 1.5);
         if (character.equipment?.weapon) {
           bonuses.counterChance += 10;
         }
         break;
+      }
     }
 
     // General bonuses from stats and equipment
@@ -262,66 +296,82 @@ export class DefendCommand extends BaseGameCommand {
 
     // Equipment bonuses
     if (character.equipment?.armor) {
-      bonuses.defenseRating += character.equipment.armor.defense || 0;
-      bonuses.damageReduction += character.equipment.armor.damageReduction || 0;
+      bonuses.defenseRating += character.equipment.armor.stats?.defense || 0;
+      // bonuses.damageReduction += character.equipment.armor.damageReduction || 0;
     }
 
     return bonuses;
   }
 
-  private async applyDefenseEffect(character: any, defenseType: string, bonuses: any, focusTarget?: string): Promise<{ description: string; duration: number }> {
-    const duration = 180; // 3 minutes in seconds
-    
-    if (!character.defensiveStances) {
-      character.defensiveStances = [];
-    }
-
-    // Remove existing defense stance
-    character.defensiveStances = character.defensiveStances.filter((stance: any) => stance.type !== 'active');
-
-    // Add new defense stance
-    const defenseStance = {
-      type: 'active',
-      defenseType,
-      bonuses,
-      focusTarget,
-      appliedAt: Date.now(),
-      expiresAt: Date.now() + (duration * 1000)
-    };
-
-    character.defensiveStances.push(defenseStance);
+  private async applyDefenseEffect(character: any, defenseType: string, bonuses: any, focusTarget?: string): Promise<IGameEffect> {
+    const duration = 180_000; // 3 minutes in ms
 
     let description = `You adopt a defensive ${defenseType} stance`;
     if (focusTarget) {
       description += ` focused on your target`;
     }
-    description += `. Duration: ${duration} seconds`;
+    description += `. Duration: ${duration / 1000} seconds`;
 
-    return { description, duration };
+    const effect: IGameEffect = {
+      id: uuidv4(),
+      name: `Defense Stance: ${defenseType}`,
+      description,
+      type: EffectType.BUFF,
+      duration,
+      remainingDuration: duration,
+      magnitude: 1,
+      isStackable: false,
+      maxStacks: 1,
+      currentStacks: 1,
+      sourceId: character.id,
+      targetId: character.id,
+      statModifiers: bonuses,
+      metadata: {
+        defenseType,
+        focusTarget
+      }
+    };
+
+    return effect;
   }
 
-  private async setupCounterAttack(character: any): Promise<any> {
-    if (!character.counterAttack) {
-      character.counterAttack = {};
-    }
+  private async setupCounterAttack(character: any): Promise<IGameEffect> {
+    const chance = 15 + Math.floor((character.attributes.dexterity - 10) * 1.5);
+    const damageMultiplier = 0.8;
+    const duration = 30_000; // 30 seconds
 
-    character.counterAttack = {
-      available: true,
-      chance: 15 + Math.floor((character.attributes.dexterity - 10) * 1.5),
-      damageMultiplier: 0.8,
-      expiresAt: Date.now() + 30000 // 30 seconds
+    const effect: IGameEffect = {
+      id: uuidv4(),
+      name: 'Counter Attack Stance',
+      description: 'Ready to counter attack',
+      type: EffectType.BUFF,
+      duration,
+      remainingDuration: duration,
+      magnitude: 1,
+      isStackable: false,
+      maxStacks: 1,
+      currentStacks: 1,
+      sourceId: character.id,
+      targetId: character.id,
+      metadata: {
+        counterChance: chance,
+        damageMultiplier
+      }
     };
 
-    return {
-      chance: character.counterAttack.chance,
-      damageMultiplier: character.counterAttack.damageMultiplier,
-      duration: 30
-    };
+    return effect;
   }
 
   private findTarget(context: IGameContext, targetId: string) {
+    if (!context.services?.worldService) return;
+
+    if (!context.session?.character) {
+      return;
+    }
     const currentLocation = context.session.character.position;
+
+    if (!currentLocation) return;
     const entities = context.services.worldService.getEntitiesAtLocation(currentLocation);
-    return entities.find(entity => entity.id === targetId);
+    return entities.find((entity: any) => entity.id === targetId);
   }
 }

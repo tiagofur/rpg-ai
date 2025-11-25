@@ -1,12 +1,16 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "allowJs": true,
     "noEmit": true,
     "resolveJsonModule": true,
-    "types": ["react", "react-native"]
+    "types": ["react", "react-native"],
+    "typeRoots": ["../../node_modules/@types", "./node_modules/@types"],
+    "rootDir": "../../"
   },
-  "include": ["**/*.ts", "**/*.tsx", "index.js"],
+  "include": ["**/*.ts", "**/*.tsx", "index.js", "**/*.json", "../../packages/shared/src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

@@ -1,9 +1,9 @@
 import type { Prisma } from "@prisma/client";
-import type { Character, Session, SessionSummary } from "@rpg-ai/shared";
+import type { Character, Session, SessionSummary } from "../shared/index.js";
 
 type AttributeLevel = Character["atributos"][string];
 
-const ATTRIBUTE_LEVELS: AttributeLevel[] = ["Alta", "Media", "Baja"];
+const ATTRIBUTE_LEVELS: Array<AttributeLevel> = ["Alta", "Media", "Baja"];
 
 const isAttributeLevel = (value: unknown): value is AttributeLevel =>
   typeof value === "string" && ATTRIBUTE_LEVELS.includes(value as AttributeLevel);
@@ -36,7 +36,7 @@ export function serializeCharacter(character: CharacterRecord): Character {
   };
 }
 
-type SessionWithCharacters = Prisma.SessionGetPayload<{ include: { characters: true } }>;
+type SessionWithCharacters = Prisma.GameSessionGetPayload<{ include: { characters: true } }>;
 
 export function serializeSession(session: SessionWithCharacters): Session {
   return {

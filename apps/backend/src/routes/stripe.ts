@@ -8,13 +8,11 @@ import { PremiumFeaturesService } from '../services/PremiumFeaturesService.js';
 import { AuthenticationService } from '../services/AuthenticationService.js';
 import { RedisClient } from '../utils/redis.js';
 import { AppError, ErrorCode } from '../utils/errors.js';
-import { 
-  SubscriptionPlan, 
+import {
+  SubscriptionPlan,
   BillingInterval,
   PremiumFeature,
-  PLAN_CONFIG,
-  type CreateSubscriptionResponse,
-  type ChangePlanRequest
+  PLAN_CONFIG
 } from '../types/premium.js';
 import { authenticate } from '../plugins/auth.js';
 
@@ -27,23 +25,17 @@ export interface StripeRoutesOptions {
 /**
  * Validar método de pago
  */
-const validatePaymentMethod = (paymentMethodId: string): boolean => {
-  return paymentMethodId && paymentMethodId.startsWith('pm_');
-};
+const validatePaymentMethod = (paymentMethodId: string): boolean => !!(paymentMethodId && paymentMethodId.startsWith('pm_'));
 
 /**
  * Validar plan de suscripción
  */
-const validateSubscriptionPlan = (plan: string): boolean => {
-  return Object.values(SubscriptionPlan).includes(plan as SubscriptionPlan);
-};
+const validateSubscriptionPlan = (plan: string): boolean => Object.values(SubscriptionPlan).includes(plan as SubscriptionPlan);
 
 /**
  * Validar intervalo de facturación
  */
-const validateBillingInterval = (interval: string): boolean => {
-  return Object.values(BillingInterval).includes(interval as BillingInterval);
-};
+const validateBillingInterval = (interval: string): boolean => Object.values(BillingInterval).includes(interval as BillingInterval);
 
 /**
  * Registrar rutas de Stripe
@@ -52,16 +44,16 @@ export async function stripeRoutes(
   fastify: FastifyInstance,
   options: StripeRoutesOptions
 ) {
-  const { premiumService, authService, redis } = options;
+  const { premiumService } = options;
 
   /**
    * @route GET /stripe/config
    * @description Obtener configuración pública de Stripe
    */
-  fastify.get('/stripe/config', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get('/stripe/config', async (_request: FastifyRequest, _reply: FastifyReply) => {
     try {
       return {
-        publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || 'pk_test_default',
+        publishableKey: process.env['STRIPE_PUBLISHABLE_KEY'] || 'pk_test_default',
         availablePlans: Object.entries(PLAN_CONFIG).map(([key, config]) => ({
           id: key,
           name: config.name,
@@ -93,15 +85,15 @@ export async function stripeRoutes(
           paymentMethodId: { type: 'string' },
         },
       },
-    },
-  }, async (request: FastifyRequest<{ Body: {
-    plan: SubscriptionPlan;
-    billingInterval: BillingInterval;
-    paymentMethodId: string;
-  } }>, reply: FastifyReply) => {
+    }
+  }, async (request: FastifyRequest, _reply: FastifyReply) => {
+    const { plan, billingInterval, paymentMethodId } = request.body as {
+      plan: SubscriptionPlan;
+      billingInterval: BillingInterval;
+      paymentMethodId: string;
+    };
     try {
-      const userId = request.user!.id;
-      const { plan, billingInterval, paymentMethodId } = request.body;
+      const userId = (request as any).user!.id;
 
       // Validaciones adicionales
       if (!validatePaymentMethod(paymentMethodId)) {
@@ -130,7 +122,7 @@ export async function stripeRoutes(
     } catch (error) {
       console.error('Error creating subscription:', error);
       if (error instanceof AppError) throw error;
-      
+
       throw new AppError(
         'Failed to create subscription',
         ErrorCode.INTERNAL_SERVER_ERROR,
@@ -145,9 +137,9 @@ export async function stripeRoutes(
    */
   fastify.get('/stripe/subscription', {
     preHandler: authenticate,
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
+  }, async (request: FastifyRequest, _reply: FastifyReply) => {
     try {
-      const userId = request.user!.id;
+      const userId = (request as any).user!.id;
       const subscription = await premiumService.getUserSubscription(userId);
 
       if (!subscription) {
@@ -191,12 +183,10 @@ export async function stripeRoutes(
         },
       },
     },
-  }, async (request: FastifyRequest<{ Body: {
-    cancelAtPeriodEnd?: boolean;
-  } }>, reply: FastifyReply) => {
+  }, async (request: FastifyRequest, _reply: FastifyReply) => {
+    const { cancelAtPeriodEnd = true } = request.body as { cancelAtPeriodEnd?: boolean };
     try {
-      const userId = request.user!.id;
-      const { cancelAtPeriodEnd = true } = request.body;
+      const userId = (request as any).user!.id;
 
       await premiumService.cancelSubscription(userId, cancelAtPeriodEnd);
 
@@ -207,7 +197,7 @@ export async function stripeRoutes(
     } catch (error) {
       console.error('Error canceling subscription:', error);
       if (error instanceof AppError) throw error;
-      
+
       throw new AppError(
         'Failed to cancel subscription',
         ErrorCode.INTERNAL_SERVER_ERROR,
@@ -223,16 +213,16 @@ export async function stripeRoutes(
   fastify.post('/stripe/webhook', {
     config: {
       rawBody: true,
-    },
-  }, async (request: FastifyRequest<{ Body: Buffer }>, reply: FastifyReply) => {
+    } as any,
+  }, async (request: FastifyRequest, _reply: FastifyReply) => {
     try {
       const signature = request.headers['stripe-signature'] as string;
-      
+
       if (!signature) {
         throw new AppError('Missing Stripe signature', ErrorCode.UNAUTHORIZED, 401);
       }
 
-      await premiumService.processStripeWebhook(signature, request.body);
+      await premiumService.processStripeWebhook(signature, request.body as Buffer);
 
       return {
         success: true,
@@ -241,7 +231,7 @@ export async function stripeRoutes(
     } catch (error) {
       console.error('Error processing webhook:', error);
       if (error instanceof AppError) throw error;
-      
+
       throw new AppError(
         'Failed to process webhook',
         ErrorCode.INTERNAL_SERVER_ERROR,
@@ -264,10 +254,10 @@ export async function stripeRoutes(
         },
       },
     },
-  }, async (request: FastifyRequest<{ Params: { feature: PremiumFeature } }>, reply: FastifyReply) => {
+  }, async (request: FastifyRequest, _reply: FastifyReply) => {
+    const { feature } = request.params as { feature: PremiumFeature };
     try {
-      const userId = request.user!.id;
-      const { feature } = request.params;
+      const userId = (request as any).user!.id;
 
       const hasAccess = await premiumService.checkPremiumAccess(userId, feature);
 
@@ -294,9 +284,9 @@ export async function stripeRoutes(
    */
   fastify.get('/premium/usage', {
     preHandler: authenticate,
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
+  }, async (request: FastifyRequest, _reply: FastifyReply) => {
     try {
-      const userId = request.user!.id;
+      const userId = (request as any).user!.id;
       const usageStats = await premiumService.getUsageStats(userId);
 
       return {

@@ -1,7 +1,7 @@
 import { Redis } from 'ioredis';
-import { GameEngine } from '../game/GameEngine';
 import { PrismaClient } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
+import { GameEngine } from '../game/GameEngine.js';
 
 /**
  * Prueba del sistema de bloqueo de sesión y AI Gateway
@@ -12,9 +12,9 @@ async function testSessionLockAndAI() {
 
   // Configuración
   const redis = new Redis({
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD || undefined
+    host: process.env['REDIS_HOST'] || 'localhost',
+    port: Number.parseInt(process.env['REDIS_PORT'] || '6379'),
+    ...(process.env['REDIS_PASSWORD'] ? { password: process.env['REDIS_PASSWORD'] } : {})
   });
 
   const prisma = new PrismaClient();
@@ -24,7 +24,7 @@ async function testSessionLockAndAI() {
     prisma,
     maxUndoStackSize: 100,
     maxEventHistorySize: 1000,
-    autoSaveInterval: 30000, // 30 segundos
+    autoSaveInterval: 30_000, // 30 segundos
     maxConcurrentSessions: 100,
     enableAI: true,
     enablePersistence: true,
@@ -53,7 +53,7 @@ async function testSessionLockAndAI() {
     console.log('🔒 Test 2: Probando bloqueo de sesión...');
 
     // Intentar ejecutar dos comandos simultáneos
-    const sessionId = session.sessionId;
+    const {sessionId} = session;
 
     const promise1 = gameEngine.executeCommand(
       sessionId,
@@ -71,8 +71,9 @@ async function testSessionLockAndAI() {
 
     try {
       const [result1, result2] = await Promise.all([promise1, promise2]);
+      console.log('Resultados:', { result1, result2 });
       console.log('⚠️  Ambos comandos se ejecutaron (no deberían hacerlo simultáneamente)');
-    } catch (error) {
+    } catch (error: any) {
       console.log('✅ Bloqueo funcionando correctamente:', error.message);
     }
 
@@ -105,7 +106,7 @@ async function testSessionLockAndAI() {
       } else {
         console.log('❌ Error generando narrativa:', narrativeResult.message);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.log('❌ Error en generación de narrativa:', error.message);
     }
 
@@ -118,7 +119,7 @@ async function testSessionLockAndAI() {
 
       const redoResult = await gameEngine.redoCommand(sessionId, userId);
       console.log('✅ Redo ejecutado:', redoResult.success);
-    } catch (error) {
+    } catch (error: any) {
       console.log('❌ Error en undo/redo:', error.message);
     }
 

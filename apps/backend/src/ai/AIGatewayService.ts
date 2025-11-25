@@ -1,21 +1,31 @@
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Redis } from 'ioredis';
+import * as crypto from 'node:crypto';
 import { v4 as uuidv4 } from 'uuid';
 import {
   IAIService,
-  ITextGenerationParams,
+  ITextGenerationParameters,
   ITextGenerationResult,
-  IImageGenerationParams,
+  IImageGenerationParameters,
   IImageGenerationResult,
-  IImageAnalysisParams,
+  IImageAnalysisParameters,
   IImageAnalysisResult,
   IServiceStatus,
   AIModel,
   ImageModel,
   IUsageMetrics,
-  IAIContext
-} from './interfaces/IAIService';
-import { GameError, ErrorCode } from '../errors/GameError';
+  IAIContext,
+  IGeneratedImage,
+  IGameActionResult,
+  IGameStateSnapshot,
+  IInteraction,
+  IUserPreferences,
+  ISafetySetting,
+  IEntity,
+  HarmCategory,
+  HarmBlockThreshold
+} from './interfaces/IAIService.js';
+import { GameError, ErrorCode } from '../errors/GameError.js';
 
 /**
  * AI Gateway Service - Implementación con Google AI SDK
@@ -23,32 +33,36 @@ import { GameError, ErrorCode } from '../errors/GameError';
  */
 export class AIGatewayService implements IAIService {
   private readonly textModel: AIModel = AIModel.GEMINI_2_5_FLASH;
+
   private readonly imageModel: ImageModel = ImageModel.NANO_BANANA;
+
   private readonly genAI: GoogleGenerativeAI;
+
   private readonly redis: Redis;
+
   private readonly config: IAIConfig;
+
   private readonly metrics: IAIMetrics;
+
   private readonly startTime: number;
 
   constructor(apiKey: string, redis?: Redis) {
     this.startTime = Date.now();
-    
+
     // Configuración por defecto
     this.config = {
       apiKey,
-      cacheTtl: 3600,
+      enableCaching: true,
+      cacheTTL: 3600,
       maxRetries: 3,
-      timeoutMs: 30000,
+      timeout: 30_000,
       rateLimit: {
         requestsPerMinute: 60,
-        requestsPerHour: 1000
+        tokensPerMinute: 10_000
       },
-      safetySettings: {
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-        categories: ['HARM_CATEGORY_HARASSMENT', 'HARM_CATEGORY_HATE_SPEECH', 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'HARM_CATEGORY_DANGEROUS_CONTENT']
-      }
+      safetySettings: this.getDefaultSafetySettings()
     };
-    
+
     this.redis = redis || new Redis();
 
     // Inicializar Google AI SDK
@@ -61,7 +75,6 @@ export class AIGatewayService implements IAIService {
       failedRequests: 0,
       totalTokens: 0,
       averageLatency: 0,
-      lastError: null,
       errorRate: 0
     };
   }
@@ -69,7 +82,7 @@ export class AIGatewayService implements IAIService {
   /**
    * Genera contenido de texto con Gemini 2.5 Flash
    */
-  async generateText(params: ITextGenerationParams): Promise<ITextGenerationResult> {
+  async generateText(parameters: ITextGenerationParameters): Promise<ITextGenerationResult> {
     const startTime = Date.now();
     const requestId = uuidv4();
 
@@ -78,19 +91,20 @@ export class AIGatewayService implements IAIService {
 
       // Obtener modelo
       const model = this.genAI.getGenerativeModel({
-        model: params.model || this.textModel,
+        model: parameters.model || this.textModel,
         generationConfig: {
-          temperature: params.temperature ?? 0.7,
-          topP: params.topP ?? 0.9,
-          topK: params.topK ?? 40,
-          maxOutputTokens: params.maxTokens ?? 2048,
-          stopSequences: params.stopSequences || []
+          temperature: parameters.temperature ?? 0.7,
+          topP: parameters.topP ?? 0.9,
+          topK: parameters.topK ?? 40,
+          maxOutputTokens: parameters.maxTokens ?? 2048,
+          stopSequences: parameters.stopSequences || []
         },
-        safetySettings: params.safetySettings || this.getDefaultSafetySettings()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        safetySettings: (parameters.safetySettings || this.getDefaultSafetySettings()) as any
       });
 
       // Construir prompt con contexto
-      const enhancedPrompt = this.buildEnhancedPrompt(params);
+      const enhancedPrompt = this.buildEnhancedPrompt(parameters);
 
       // Generar contenido
       const result = await model.generateContent(enhancedPrompt);
@@ -102,7 +116,7 @@ export class AIGatewayService implements IAIService {
 
       // Guardar en caché si es necesario
       if (this.config.enableCaching) {
-        await this.cacheResult(requestId, params, text);
+        await this.cacheResult(requestId, parameters, text);
       }
 
       // Actualizar métricas
@@ -110,14 +124,14 @@ export class AIGatewayService implements IAIService {
       this.updateMetrics(true, latency, usage);
 
       // Guardar interacción en contexto
-      if (params.context) {
-        await this.saveInteraction(params.context, params.prompt, text, params.model || this.textModel);
+      if (parameters.context) {
+        await this.saveInteraction(parameters.context, parameters.prompt, text, parameters.model || this.textModel);
       }
 
       return {
         text,
         usage,
-        model: params.model || this.textModel,
+        model: parameters.model || this.textModel,
         finishReason: this.extractFinishReason(response),
         safetyRatings: this.extractSafetyRatings(response),
         candidates: this.extractCandidates(response)
@@ -131,7 +145,7 @@ export class AIGatewayService implements IAIService {
         `Error generating text: ${error instanceof Error ? error.message : 'Unknown error'}`,
         ErrorCode.AI_GENERATION_FAILED,
         500,
-        { requestId, params: { prompt: params.prompt.substring(0, 100) + '...' } }
+        { requestId, params: { prompt: `${parameters.prompt.slice(0, 100)}...` } }
       );
     }
   }
@@ -139,7 +153,7 @@ export class AIGatewayService implements IAIService {
   /**
    * Genera imagen con Nano Banana (Imagen-3)
    */
-  async generateImage(params: IImageGenerationParams): Promise<IImageGenerationResult> {
+  async generateImage(parameters: IImageGenerationParameters): Promise<IImageGenerationResult> {
     const startTime = Date.now();
     const requestId = uuidv4();
 
@@ -148,7 +162,7 @@ export class AIGatewayService implements IAIService {
 
       // Por ahora, usamos un modelo de texto para generar descripciones detalladas
       // En producción, esto se conectaría al servicio de Imagen-3 de Google
-      const imagePrompt = this.buildImagePrompt(params);
+      const imagePrompt = this.buildImagePrompt(parameters);
 
       // Generar descripción detallada de la imagen
       const textResult = await this.generateText({
@@ -158,24 +172,27 @@ export class AIGatewayService implements IAIService {
       });
 
       // Crear imagen placeholder (en producción usaríamos el servicio real)
-      const generatedImages: IGeneratedImage[] = [];
-      const numberOfImages = params.numberOfImages || 1;
+      const generatedImages: Array<IGeneratedImage> = [];
+      const numberOfImages = parameters.numberOfImages || 1;
 
-      for (let i = 0; i < numberOfImages; i++) {
-        // En producción, aquí llamaríamos al servicio de Imagen-3
-        // Por ahora, creamos una representación base64 placeholder
-        const placeholderImage = this.createPlaceholderImage(
-          params.aspectRatio || '1:1',
-          textResult.text,
-          params.seed || Math.floor(Math.random() * 1000000)
-        );
+      for (let index = 0; index < numberOfImages; index++) {
+        // Usamos Pollinations.ai para generar imágenes reales impresionantes sin API Key por ahora
+        // Esto da el factor "WoW" inmediato
+        const encodedPrompt = encodeURIComponent(`${imagePrompt} ${parameters.style || 'fantasy RPG, 8k, masterpiece, detailed'}`);
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${this.getWidthFromAspectRatio(parameters.aspectRatio || '1:1')}&height=${this.getHeightFromAspectRatio(parameters.aspectRatio || '1:1')}&nologo=true`;
+
+        // Fetch the image and convert to base64
+        const imageResponse = await fetch(imageUrl);
+        const arrayBuffer = await imageResponse.arrayBuffer();
+        const base64Image = Buffer.from(arrayBuffer).toString('base64');
+        const mimeType = 'image/jpeg';
 
         generatedImages.push({
-          base64: placeholderImage,
-          mimeType: 'image/png',
-          width: this.getWidthFromAspectRatio(params.aspectRatio || '1:1'),
-          height: this.getHeightFromAspectRatio(params.aspectRatio || '1:1'),
-          seed: params.seed || Math.floor(Math.random() * 1000000)
+          base64: `data:${mimeType};base64,${base64Image}`,
+          mimeType,
+          width: this.getWidthFromAspectRatio(parameters.aspectRatio || '1:1'),
+          height: this.getHeightFromAspectRatio(parameters.aspectRatio || '1:1'),
+          seed: parameters.seed || Math.floor(Math.random() * 1_000_000)
         });
       }
 
@@ -193,7 +210,7 @@ export class AIGatewayService implements IAIService {
       return {
         images: generatedImages,
         usage,
-        model: params.model || this.imageModel
+        model: parameters.model || this.imageModel
       };
 
     } catch (error) {
@@ -204,7 +221,7 @@ export class AIGatewayService implements IAIService {
         `Error generating image: ${error instanceof Error ? error.message : 'Unknown error'}`,
         ErrorCode.AI_GENERATION_FAILED,
         500,
-        { requestId, params }
+        { requestId, params: parameters }
       );
     }
   }
@@ -212,7 +229,7 @@ export class AIGatewayService implements IAIService {
   /**
    * Analiza una imagen existente
    */
-  async analyzeImage(params: IImageAnalysisParams): Promise<IImageAnalysisResult> {
+  async analyzeImage(parameters: IImageAnalysisParameters): Promise<IImageAnalysisResult> {
     const startTime = Date.now();
     const requestId = uuidv4();
 
@@ -221,12 +238,12 @@ export class AIGatewayService implements IAIService {
 
       // Obtener modelo de visión
       const model = this.genAI.getGenerativeModel({
-        model: params.model || this.textModel
+        model: parameters.model || this.textModel
       });
 
       // Preparar imagen y prompt
-      const imagePart = await this.prepareImagePart(params.image);
-      const prompt = params.prompt || 'Describe this image in detail for an RPG game.';
+      const imagePart = await this.prepareImagePart(parameters.image);
+      const prompt = parameters.prompt || 'Describe this image in detail for an RPG game.';
 
       // Generar contenido
       const result = await model.generateContent([prompt, imagePart]);
@@ -249,7 +266,7 @@ export class AIGatewayService implements IAIService {
         entities,
         sentiment,
         usage,
-        model: params.model || this.textModel
+        model: parameters.model || this.textModel
       };
 
     } catch (error) {
@@ -266,21 +283,117 @@ export class AIGatewayService implements IAIService {
   }
 
   /**
+   * Genera una acción de juego estructurada
+   */
+  async generateGameAction(parameters: ITextGenerationParameters): Promise<IGameActionResult> {
+    const startTime = Date.now();
+    const requestId = uuidv4();
+
+    try {
+      this.metrics.totalRequests++;
+
+      // Obtener modelo
+      const model = this.genAI.getGenerativeModel({
+        model: parameters.model || this.textModel,
+        generationConfig: {
+          temperature: parameters.temperature ?? 0.7,
+          topP: parameters.topP ?? 0.9,
+          topK: parameters.topK ?? 40,
+          maxOutputTokens: parameters.maxTokens ?? 2048,
+          responseMimeType: 'application/json'
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        safetySettings: (parameters.safetySettings || this.getDefaultSafetySettings()) as any
+      });
+
+      // Construir prompt con contexto y forzar JSON
+      const systemPrompt = `Eres la IA-DJ — Director de Juego para un RPG narrativo guiado por IA.
+Mandatos principales:
+- Mantén una personalidad de DJ: justo, descriptivo, evocador y consistente con la ambientación.
+- No respondas con "No". Si una acción es imposible, describe la consecuencia.
+- VISUAL DIRECTOR: Debes decidir cuándo generar una imagen ("imageTrigger": true).
+  - SÍ generar imagen cuando: El jugador entra a una nueva ubicación, encuentra un enemigo nuevo, ocurre un evento climático, o hay un momento narrativo épico/dramático.
+  - NO generar imagen para: Acciones triviales, diálogos simples, o cuando la escena no ha cambiado visualmente.
+  - "imagePrompt": Debe ser una descripción visual detallada en inglés, optimizada para generación de arte (ej: "Dark damp cave entrance, ominous lighting, fantasy style, 8k").
+
+- Siempre devuelve un JSON válido con esta estructura:
+{
+  "narration": "texto narrativo",
+  "stateChanges": {},
+  "imageTrigger": boolean,
+  "imagePrompt": "prompt para imagen",
+  "metadata": { "diceRoll": number, "probability": number, "resolution": "success|partial|failure" }
+}`;
+
+      const enhancedPrompt = `${systemPrompt}\n\n${this.buildEnhancedPrompt(parameters)}`;
+
+      // Generar contenido
+      const result = await model.generateContent(enhancedPrompt);
+      const response = await result.response;
+      const text = response.text();
+
+      // Parsear JSON
+      let parsedResult: Record<string, unknown>;
+      try {
+        // Intentar limpiar bloques de código markdown si existen
+        const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
+        parsedResult = JSON.parse(cleanText);
+      } catch (error) {
+        // Fallback simple
+        parsedResult = {
+          narration: text,
+          stateChanges: {},
+          imageTrigger: false,
+          imagePrompt: '',
+          metadata: { diceRoll: 0, probability: 0, resolution: 'unknown' }
+        };
+      }
+
+      // Procesar uso
+      const usage = this.extractUsageMetrics(response);
+
+      // Actualizar métricas
+      const latency = Date.now() - startTime;
+      this.updateMetrics(true, latency, usage);
+
+      return {
+        narration: (parsedResult['narration'] as string) || text,
+        stateChanges: (parsedResult['stateChanges'] as Record<string, unknown>) || {},
+        imageTrigger: (parsedResult['imageTrigger'] as boolean) || false,
+        imagePrompt: (parsedResult['imagePrompt'] as string) || '',
+        metadata: (parsedResult['metadata'] as { diceRoll: number; probability: number; resolution: string }) || { diceRoll: 0, probability: 0, resolution: 'unknown' },
+        usage
+      };
+
+    } catch (error) {
+      const latency = Date.now() - startTime;
+      this.updateMetrics(false, latency);
+
+      throw new GameError(
+        `Error generating game action: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        ErrorCode.AI_GENERATION_FAILED,
+        500,
+        { requestId }
+      );
+    }
+  }
+
+  /**
    * Genera contenido con streaming
    */
-  async generateTextStream(params: ITextGenerationParams): Promise<ReadableStream> {
+  async generateTextStream(parameters: ITextGenerationParameters): Promise<ReadableStream> {
     try {
       const model = this.genAI.getGenerativeModel({
-        model: params.model || this.textModel,
+        model: parameters.model || this.textModel,
         generationConfig: {
-          temperature: params.temperature ?? 0.7,
-          topP: params.topP ?? 0.9,
-          topK: params.topK ?? 40,
-          maxOutputTokens: params.maxTokens ?? 2048
+          temperature: parameters.temperature ?? 0.7,
+          topP: parameters.topP ?? 0.9,
+          topK: parameters.topK ?? 40,
+          maxOutputTokens: parameters.maxTokens ?? 2048
         }
       });
 
-      const enhancedPrompt = this.buildEnhancedPrompt(params);
+      const enhancedPrompt = this.buildEnhancedPrompt(parameters);
       const result = await model.generateContentStream(enhancedPrompt);
 
       // Convertir el stream de Google a ReadableStream estándar
@@ -306,9 +419,9 @@ export class AIGatewayService implements IAIService {
 
     return {
       isHealthy: this.metrics.lastError === null ||
-        (Date.now() - (this.metrics.lastError?.timestamp || 0)) > 60000, // Healthy si no hay errores en 1 minuto
+        (Date.now() - (this.metrics.lastError?.timestamp || 0)) > 60_000, // Healthy si no hay errores en 1 minuto
       latency: this.metrics.averageLatency,
-      lastError: this.metrics.lastError?.message,
+      ...(this.metrics.lastError?.message ? { lastError: this.metrics.lastError.message } : {}),
       uptime,
       requestsCount: this.metrics.totalRequests,
       errorRate
@@ -320,11 +433,11 @@ export class AIGatewayService implements IAIService {
   /**
    * Construye prompt mejorado con contexto del juego
    */
-  private buildEnhancedPrompt(params: ITextGenerationParams): string {
-    let enhancedPrompt = params.prompt;
+  private buildEnhancedPrompt(parameters: ITextGenerationParameters): string {
+    let enhancedPrompt = parameters.prompt;
 
-    if (params.context) {
-      const context = params.context;
+    if (parameters.context) {
+      const { context } = parameters;
 
       // Agregar contexto del juego
       if (context.gameState) {
@@ -402,13 +515,13 @@ export class AIGatewayService implements IAIService {
   /**
    * Construye contexto de interacciones recientes
    */
-  private buildRecentContext(interactions: IInteraction[]): string {
+  private buildRecentContext(interactions: Array<IInteraction>): string {
     const recent = interactions.slice(-3); // Últimas 3 interacciones
     let context = `[CONTEXTO RECIENTE]`;
 
-    recent.forEach((interaction, index) => {
-      context += `\n${index + 1}. ${interaction.type}: ${interaction.prompt.substring(0, 50)}...`;
-    });
+    for (const [index, interaction] of recent.entries()) {
+      context += `\n${index + 1}. ${interaction.type}: ${interaction.prompt.slice(0, 50)}...`;
+    }
 
     return context;
   }
@@ -416,22 +529,22 @@ export class AIGatewayService implements IAIService {
   /**
    * Configuración de seguridad por defecto
    */
-  private getDefaultSafetySettings() {
+  private getDefaultSafetySettings(): Array<ISafetySetting> {
     return [
       {
-        category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+        category: HarmCategory.HARM_CATEGORY_DEROGATORY,
         threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
       },
       {
-        category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+        category: HarmCategory.HARM_CATEGORY_TOXICITY,
         threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
       },
       {
-        category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+        category: HarmCategory.HARM_CATEGORY_SEXUAL,
         threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
       },
       {
-        category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+        category: HarmCategory.HARM_CATEGORY_DANGEROUS,
         threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
       },
     ];
@@ -440,6 +553,7 @@ export class AIGatewayService implements IAIService {
   /**
    * Extrae métricas de uso de la respuesta
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private extractUsageMetrics(response: any): IUsageMetrics {
     // En producción, extraerías las métricas reales de la respuesta
     // Por ahora, estimamos basándonos en el texto
@@ -451,14 +565,15 @@ export class AIGatewayService implements IAIService {
       promptTokens,
       completionTokens,
       totalTokens: promptTokens + completionTokens,
-      estimatedCost: (promptTokens + completionTokens) * 0.000001 // Costo estimado
+      estimatedCost: (promptTokens + completionTokens) * 0.000_001 // Costo estimado
     };
   }
 
   /**
    * Extrae razón de finalización
    */
-  private extractFinishReason(response: any): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private extractFinishReason(_response: any): string {
     // En producción, extraerías la razón real
     return 'STOP';
   }
@@ -466,7 +581,8 @@ export class AIGatewayService implements IAIService {
   /**
    * Extrae calificaciones de seguridad
    */
-  private extractSafetyRatings(response: any): any[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private extractSafetyRatings(_response: any): Array<any> {
     // En producción, extraerías las calificaciones reales
     return [];
   }
@@ -474,7 +590,8 @@ export class AIGatewayService implements IAIService {
   /**
    * Extrae candidatos
    */
-  private extractCandidates(response: any): any[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private extractCandidates(_response: any): Array<any> {
     // En producción, extraerías los candidatos reales
     return [];
   }
@@ -482,13 +599,13 @@ export class AIGatewayService implements IAIService {
   /**
    * Guarda resultado en caché
    */
-  private async cacheResult(requestId: string, params: ITextGenerationParams, result: string): Promise<void> {
-    const cacheKey = `ai:cache:${this.generateCacheHash(params)}`;
+  private async cacheResult(requestId: string, parameters: ITextGenerationParameters, result: string): Promise<void> {
+    const cacheKey = `ai:cache:${this.generateCacheHash(parameters)}`;
     const cacheData = {
       requestId,
       result,
       timestamp: Date.now(),
-      params
+      params: parameters
     };
 
     await this.redis.setex(cacheKey, this.config.cacheTTL, JSON.stringify(cacheData));
@@ -497,14 +614,13 @@ export class AIGatewayService implements IAIService {
   /**
    * Genera hash para caché
    */
-  private generateCacheHash(params: ITextGenerationParams): string {
-    const crypto = require('crypto');
+  private generateCacheHash(parameters: ITextGenerationParameters): string {
     const hash = crypto.createHash('md5');
     hash.update(JSON.stringify({
-      prompt: params.prompt,
-      model: params.model,
-      temperature: params.temperature,
-      maxTokens: params.maxTokens
+      prompt: parameters.prompt,
+      model: parameters.model,
+      temperature: parameters.temperature,
+      maxTokens: parameters.maxTokens
     }));
     return hash.digest('hex');
   }
@@ -516,8 +632,8 @@ export class AIGatewayService implements IAIService {
     const interaction = {
       timestamp: new Date().toISOString(),
       type: 'text' as const,
-      prompt: prompt.substring(0, 500), // Limitar tamaño
-      result: result.substring(0, 1000), // Limitar tamaño
+      prompt: prompt.slice(0, 500), // Limitar tamaño
+      result: result.slice(0, 1000), // Limitar tamaño
       model
     };
 
@@ -567,11 +683,11 @@ export class AIGatewayService implements IAIService {
   /**
    * Construye prompt para generación de imagen
    */
-  private buildImagePrompt(params: IImageGenerationParams): string {
-    return `Create a detailed description for an RPG game image based on this prompt: "${params.prompt}"` +
-      `${params.negativePrompt ? ` Avoid: ${params.negativePrompt}` : ''}` +
-      ` Style: ${params.style || 'fantasy RPG'}` +
-      ` Aspect ratio: ${params.aspectRatio || '1:1'}`;
+  private buildImagePrompt(parameters: IImageGenerationParameters): string {
+    return `Create a detailed description for an RPG game image based on this prompt: "${parameters.prompt}"` +
+      `${parameters.negativePrompt ? ` Avoid: ${parameters.negativePrompt}` : ''}` +
+      ` Style: ${parameters.style || 'fantasy RPG'}` +
+      ` Aspect ratio: ${parameters.aspectRatio || '1:1'}`;
   }
 
   /**
@@ -586,7 +702,7 @@ export class AIGatewayService implements IAIService {
     const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">` +
       `<rect width="100%" height="100%" fill="#2a2a2a"/>` +
       `<text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#ffffff" font-family="Arial" font-size="16">` +
-      `AI Generated Image\n${description.substring(0, 50)}...\nSeed: ${seed}` +
+      `AI Generated Image\n${description.slice(0, 50)}...\nSeed: ${seed}` +
       `</text></svg>`;
 
     return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
@@ -597,12 +713,24 @@ export class AIGatewayService implements IAIService {
    */
   private getWidthFromAspectRatio(aspectRatio: string): number {
     switch (aspectRatio) {
-      case '1:1': return 512;
-      case '4:3': return 512;
-      case '16:9': return 512;
-      case '3:4': return 384;
-      case '9:16': return 288;
-      default: return 512;
+      case '1:1': {
+        return 512;
+      }
+      case '4:3': {
+        return 512;
+      }
+      case '16:9': {
+        return 512;
+      }
+      case '3:4': {
+        return 384;
+      }
+      case '9:16': {
+        return 288;
+      }
+      default: {
+        return 512;
+      }
     }
   }
 
@@ -611,19 +739,31 @@ export class AIGatewayService implements IAIService {
    */
   private getHeightFromAspectRatio(aspectRatio: string): number {
     switch (aspectRatio) {
-      case '1:1': return 512;
-      case '4:3': return 384;
-      case '16:9': return 288;
-      case '3:4': return 512;
-      case '9:16': return 512;
-      default: return 512;
+      case '1:1': {
+        return 512;
+      }
+      case '4:3': {
+        return 384;
+      }
+      case '16:9': {
+        return 288;
+      }
+      case '3:4': {
+        return 512;
+      }
+      case '9:16': {
+        return 512;
+      }
+      default: {
+        return 512;
+      }
     }
   }
 
   /**
    * Prepara parte de imagen para análisis
    */
-  private async prepareImagePart(image: Buffer | string): Promise<any> {
+  private async prepareImagePart(image: Buffer | string): Promise<{ inlineData: { data: string; mimeType: string } }> {
     if (Buffer.isBuffer(image)) {
       return {
         inlineData: {
@@ -631,9 +771,11 @@ export class AIGatewayService implements IAIService {
           mimeType: 'image/png'
         }
       };
-    } else if (typeof image === 'string' && image.startsWith('data:')) {
+    } if (typeof image === 'string' && image.startsWith('data:')) {
       const [metadata, data] = image.split(',');
-      const mimeType = metadata.split(':')[1].split(';')[0];
+      if (!metadata || !data) throw new Error('Invalid image format');
+      const mimeType = metadata.split(':')[1]?.split(';')[0];
+      if (!mimeType) throw new Error('Invalid image mime type');
       return {
         inlineData: {
           data,
@@ -648,7 +790,7 @@ export class AIGatewayService implements IAIService {
   /**
    * Extrae entidades de descripción de imagen
    */
-  private extractEntitiesFromImageDescription(description: string): any[] {
+  private extractEntitiesFromImageDescription(_description: string): IEntity[] {
     // Implementar extracción de entidades con regex o NLP
     // Por ahora, retornar array vacío
     return [];
@@ -657,7 +799,7 @@ export class AIGatewayService implements IAIService {
   /**
    * Extrae sentimiento de texto
    */
-  private extractSentiment(text: string): string {
+  private extractSentiment(_text: string): string {
     // Implementar análisis de sentimiento
     // Por ahora, retornar neutral
     return 'neutral';
@@ -666,7 +808,8 @@ export class AIGatewayService implements IAIService {
   /**
    * Convierte stream de Google a ReadableStream estándar
    */
-  private convertGoogleStreamToReadableStream(googleStream: any): ReadableStream {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private convertGoogleStreamToReadableStream(googleStream: AsyncIterable<any>): ReadableStream {
     return new ReadableStream({
       async start(controller) {
         try {
@@ -688,13 +831,14 @@ export class AIGatewayService implements IAIService {
 export interface IAIConfig {
   apiKey: string;
   enableCaching: boolean;
-  cacheTTL: number; // segundos
+  cacheTTL: number; // seconds
   maxRetries: number;
   timeout: number; // milisegundos
   rateLimit: {
     requestsPerMinute: number;
     tokensPerMinute: number;
   };
+  safetySettings?: ISafetySetting[];
 }
 
 export interface IAIMetrics {
@@ -710,10 +854,3 @@ export interface IAIMetrics {
   errorRate: number;
 }
 
-export interface IUserPreferences {
-  tone: 'serious' | 'humorous' | 'dark' | 'epic' | 'casual';
-  detailLevel: 'minimal' | 'normal' | 'detailed' | 'extensive';
-  language: string;
-  contentFilters: string[];
-  narrativeStyle: 'first-person' | 'third-person' | 'omniscient';
-}

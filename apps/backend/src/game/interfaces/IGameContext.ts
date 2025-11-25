@@ -1,6 +1,6 @@
-import { ICharacter } from './ICharacter';
-import { IGameState } from './IGameCommand';
-import { IPosition } from './ICharacter';
+import { ICharacter , IPosition } from './ICharacter.js';
+import { IGameState } from './IGameCommand.js';
+
 
 export interface IGameContext {
   readonly sessionId: string;
@@ -28,9 +28,9 @@ export interface ILocation {
   readonly description: string;
   readonly type: LocationType;
   readonly coordinates: IPosition;
-  readonly connections: string[];
-  readonly objects: IGameObject[];
-  readonly characters: ICharacter[];
+  readonly connections: Array<string>;
+  readonly objects: Array<IGameObject>;
+  readonly characters: Array<ICharacter>;
   readonly weather?: IWeather;
   readonly timeOfDay?: string;
 }
@@ -42,7 +42,7 @@ export interface IGameObject {
   readonly type: string;
   readonly isInteractable: boolean;
   readonly isCollectible: boolean;
-  readonly effects?: IGameEffect[];
+  readonly effects?: Array<IGameEffect>;
   readonly script?: string;
 }
 
@@ -50,7 +50,7 @@ export interface IParty {
   readonly id: string;
   readonly name: string;
   readonly leaderId: string;
-  readonly members: string[];
+  readonly members: Array<string>;
   readonly maxSize: number;
   readonly sharedExperience: boolean;
   readonly sharedLoot: boolean;

@@ -24,6 +24,7 @@
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^5.19.0",
     "@rpg-ai/shared": "workspace:*",
+    "@stripe/stripe-react-native": "0.50.3",
     "bcrypt": "^5.1.1",
     "dotenv": "^16.4.5",
     "fastify": "^4.28.1",

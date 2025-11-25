@@ -1,0 +1,50 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "close": "Close",
+    "exit": "Exit",
+    "send": "Send",
+    "undo": "Undo",
+    "success": "Success"
+  },
+  "game": {
+    "session": "Session",
+    "loadingWorld": "Loading world...",
+    "inputPlaceholder": "What do you want to do?",
+    "character": "Character",
+    "inventory": "Inventory",
+    "premium": "Premium"
+  },
+  "character": {
+    "title": "Character Sheet",
+    "level": "Level",
+    "stats": {
+      "hp": "HP",
+      "mp": "MP",
+      "xp": "XP"
+    },
+    "attributes": "Attributes",
+    "equipment": "Equipment",
+    "empty": "(Empty)",
+    "premiumFeatures": "Premium Perks",
+    "activePlan": "Active Plan"
+  },
+  "inventory": {
+    "title": "Inventory",
+    "empty": "Your inventory is empty."
+  },
+  "subscription": {
+    "title": "Subscriptions",
+    "chooseDestiny": "Choose your destiny",
+    "subscribe": "Subscribe",
+    "processing": "Processing...",
+    "active": "ACTIVE",
+    "month": "mo",
+    "success": "Subscription Successful",
+    "successMessage": "Welcome to the premium club!",
+    "errorMessage": "Something went wrong. Please try again.",
+    "enterCardDetails": "Please enter valid card details.",
+    "paymentDetails": "Payment Details"
+  }
+}

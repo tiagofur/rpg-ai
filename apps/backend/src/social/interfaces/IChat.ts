@@ -10,7 +10,7 @@ export interface IChatMessage {
   editedAt?: Date;
   deleted: boolean;
   deletedAt?: Date;
-  reactions: Record<string, string[]>;
+  reactions: Record<string, Array<string>>;
   metadata?: Record<string, any>;
 }
 
@@ -20,8 +20,8 @@ export interface IChatRoom {
   description?: string;
   type: RoomType;
   ownerId: string;
-  moderators: string[];
-  members: string[];
+  moderators: Array<string>;
+  members: Array<string>;
   maxMembers: number;
   memberCount: number;
   isPrivate: boolean;
@@ -37,13 +37,13 @@ export interface IChatService {
   joinRoom(roomId: string, userId: string, password?: string): Promise<IChatRoom>;
   leaveRoom(roomId: string, userId: string): Promise<void>;
   sendMessage(roomId: string, userId: string, content: string, messageType?: MessageType): Promise<IChatMessage>;
-  getRoomMessages(roomId: string, limit?: number, before?: Date): Promise<IChatMessage[]>;
+  getRoomMessages(roomId: string, limit?: number, before?: Date): Promise<Array<IChatMessage>>;
   deleteMessage(roomId: string, messageId: string, userId: string): Promise<void>;
   editMessage(roomId: string, messageId: string, userId: string, newContent: string): Promise<IChatMessage>;
   addReaction(roomId: string, messageId: string, userId: string, reaction: string): Promise<void>;
   removeReaction(roomId: string, messageId: string, userId: string, reaction: string): Promise<void>;
-  getUserRooms(userId: string): Promise<IChatRoom[]>;
-  searchRooms(query: string): Promise<IChatRoom[]>;
+  getUserRooms(userId: string): Promise<Array<IChatRoom>>;
+  searchRooms(query: string): Promise<Array<IChatRoom>>;
 }
 
 export interface IGuild {
@@ -52,14 +52,14 @@ export interface IGuild {
   tag: string;
   description?: string;
   ownerId: string;
-  officers: string[];
-  members: string[];
+  officers: Array<string>;
+  members: Array<string>;
   maxMembers: number;
   level: number;
   experience: number;
   reputation: number;
   resources: IGuildResources;
-  technologies: IGuildTechnology[];
+  technologies: Array<IGuildTechnology>;
   requirements?: IGuildRequirements;
   isRecruiting: boolean;
   metadata?: Record<string, any>;
@@ -81,7 +81,7 @@ export interface IGuildTechnology {
   level: number;
   maxLevel: number;
   cost: IGuildResources;
-  effects: IGuildTechnologyEffect[];
+  effects: Array<IGuildTechnologyEffect>;
   unlocked: boolean;
 }
 
@@ -94,8 +94,8 @@ export interface IGuildTechnologyEffect {
 export interface IGuildRequirements {
   minLevel: number;
   minReputation: number;
-  classRequirements?: CharacterClass[];
-  raceRequirements?: CharacterRace[];
+  classRequirements?: Array<CharacterClass>;
+  raceRequirements?: Array<CharacterRace>;
 }
 
 export interface IGuildService {
@@ -110,8 +110,8 @@ export interface IGuildService {
   updateGuildInfo(guildId: string, ownerId: string, updates: Partial<IGuild>): Promise<IGuild>;
   contributeResources(guildId: string, userId: string, resources: Partial<IGuildResources>): Promise<void>;
   upgradeTechnology(guildId: string, userId: string, technologyId: string): Promise<void>;
-  searchGuilds(query: string): Promise<IGuild[]>;
-  getGuildRankings(category: GuildRankingCategory): Promise<IGuild[]>;
+  searchGuilds(query: string): Promise<Array<IGuild>>;
+  getGuildRankings(category: GuildRankingCategory): Promise<Array<IGuild>>;
 }
 
 export interface ITournament {
@@ -125,10 +125,10 @@ export interface ITournament {
   endTime: Date;
   maxParticipants: number;
   minParticipants: number;
-  participants: string[];
-  brackets: ITournamentBracket[];
-  prizes: ITournamentPrize[];
-  rules: ITournamentRule[];
+  participants: Array<string>;
+  brackets: Array<ITournamentBracket>;
+  prizes: Array<ITournamentPrize>;
+  rules: Array<ITournamentRule>;
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -137,7 +137,7 @@ export interface ITournament {
 export interface ITournamentBracket {
   id: string;
   round: number;
-  matches: ITournamentMatch[];
+  matches: Array<ITournamentMatch>;
 }
 
 export interface ITournamentMatch {
@@ -180,10 +180,10 @@ export interface ITournamentService {
   endTournament(tournamentId: string, userId: string): Promise<ITournament>;
   updateMatchResult(tournamentId: string, matchId: string, winnerId: string, score?: string): Promise<ITournament>;
   getTournament(tournamentId: string): Promise<ITournament>;
-  getActiveTournaments(): Promise<ITournament[]>;
-  getUpcomingTournaments(): Promise<ITournament[]>;
-  getUserTournaments(userId: string): Promise<ITournament[]>;
-  searchTournaments(query: string): Promise<ITournament[]>;
+  getActiveTournaments(): Promise<Array<ITournament>>;
+  getUpcomingTournaments(): Promise<Array<ITournament>>;
+  getUserTournaments(userId: string): Promise<Array<ITournament>>;
+  searchTournaments(query: string): Promise<Array<ITournament>>;
 }
 
 export enum MessageType {

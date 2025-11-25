@@ -1,0 +1,50 @@
+{
+  "common": {
+    "loading": "Cargando...",
+    "error": "Error",
+    "close": "Cerrar",
+    "exit": "Salir",
+    "send": "Enviar",
+    "undo": "Deshacer",
+    "success": "Éxito"
+  },
+  "game": {
+    "session": "Sesión",
+    "loadingWorld": "Cargando mundo...",
+    "inputPlaceholder": "¿Qué quieres hacer?",
+    "character": "Personaje",
+    "inventory": "Inventario",
+    "premium": "Premium"
+  },
+  "character": {
+    "title": "Hoja de Personaje",
+    "level": "Nivel",
+    "stats": {
+      "hp": "HP",
+      "mp": "MP",
+      "xp": "XP"
+    },
+    "attributes": "Atributos",
+    "equipment": "Equipamiento",
+    "empty": "(Vacío)",
+    "premiumFeatures": "Beneficios Premium",
+    "activePlan": "Plan Activo"
+  },
+  "inventory": {
+    "title": "Inventario",
+    "empty": "Tu inventario está vacío."
+  },
+  "subscription": {
+    "title": "Suscripciones",
+    "chooseDestiny": "Elige tu destino",
+    "subscribe": "Suscribirse",
+    "processing": "Procesando...",
+    "active": "ACTIVO",
+    "month": "mes",
+    "success": "Suscripción Exitosa",
+    "successMessage": "¡Bienvenido al club premium!",
+    "errorMessage": "Algo salió mal. Por favor intenta de nuevo.",
+    "enterCardDetails": "Por favor ingresa detalles de tarjeta válidos.",
+    "paymentDetails": "Detalles de Pago"
+  }
+}

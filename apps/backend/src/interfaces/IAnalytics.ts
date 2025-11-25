@@ -17,7 +17,7 @@ export interface IAnalyticsMetric {
 
 export interface IAnalyticsService {
   trackEvent(event: IAnalyticsEvent): Promise<void>;
-  getMetrics(metricName: string, timeRange: ITimeRange): Promise<IAnalyticsMetric[]>;
+  getMetrics(metricName: string, timeRange: ITimeRange): Promise<Array<IAnalyticsMetric>>;
   getUserAnalytics(userId: string, timeRange: ITimeRange): Promise<IUserAnalytics>;
   exportData(format: 'json' | 'csv' | 'parquet'): Promise<Buffer>;
 }
@@ -36,8 +36,8 @@ export interface IUserAnalytics {
   questsCompleted: number;
   battlesWon: number;
   battlesLost: number;
-  levelProgression: ILevelProgression[];
-  dailyActivity: IDailyActivity[];
+  levelProgression: Array<ILevelProgression>;
+  dailyActivity: Array<IDailyActivity>;
 }
 
 export interface ILevelProgression {

@@ -1,9 +1,9 @@
 import fp from 'fastify-plugin';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
-import { AuthenticationService, IAuthUser, ITokenPayload } from '../services/AuthenticationService';
 import { Redis } from 'ioredis';
-import { UserRole, ErrorCode } from '../types';
+import { AuthenticationService, ITokenPayload } from '../services/AuthenticationService.js';
+import { UserRole, ErrorCode, IAuthUser } from '../types/index.js';
 
 export interface AuthPluginOptions {
   jwtSecret: string;
@@ -22,7 +22,7 @@ declare module 'fastify' {
     user?: IAuthUser;
     tokenPayload?: ITokenPayload;
   }
-  
+
   interface FastifyInstance {
     auth: AuthenticationService;
   }
@@ -102,7 +102,7 @@ function requireRole(minimumRole: UserRole) {
       [UserRole.SUPER_ADMIN]: 5
     };
 
-    const userRoleLevel = roleHierarchy[request.user.role];
+    const userRoleLevel = roleHierarchy[request.user.role as UserRole];
     const requiredRoleLevel = roleHierarchy[minimumRole];
 
     if (userRoleLevel < requiredRoleLevel) {
@@ -110,7 +110,7 @@ function requireRole(minimumRole: UserRole) {
         error: ErrorCode.FORBIDDEN,
         message: 'Insufficient permissions'
       });
-      return;
+      
     }
   };
 }
@@ -130,7 +130,7 @@ async function requireMFA(request: FastifyRequest, reply: FastifyReply): Promise
       error: ErrorCode.MFA_REQUIRED,
       message: 'Multi-factor authentication must be enabled'
     });
-    return;
+    
   }
 }
 
@@ -170,7 +170,7 @@ export default fp(async (fastify: FastifyInstance, options: AuthPluginOptions) =
       };
 
       const user = await authService.register(email, username, password);
-      
+
       reply.code(201).send({
         message: 'User registered successfully',
         user: {
@@ -183,7 +183,7 @@ export default fp(async (fastify: FastifyInstance, options: AuthPluginOptions) =
       });
     } catch (error) {
       request.log.error(error, 'Registration failed');
-      
+
       if (error instanceof Error) {
         reply.code(400).send({
           error: ErrorCode.VALIDATION_ERROR,
@@ -208,7 +208,7 @@ export default fp(async (fastify: FastifyInstance, options: AuthPluginOptions) =
       };
 
       const result = await authService.login(email, password, mfaToken, deviceId);
-      
+
       if (result.requiresMFA) {
         reply.code(403).send({
           error: ErrorCode.MFA_REQUIRED,
@@ -234,10 +234,10 @@ export default fp(async (fastify: FastifyInstance, options: AuthPluginOptions) =
       });
     } catch (error) {
       request.log.error(error, 'Login failed');
-      
+
       if (error instanceof Error) {
         const errorMessage = error.message;
-        
+
         if (errorMessage.includes('Invalid credentials')) {
           reply.code(401).send({
             error: ErrorCode.INVALID_CREDENTIALS,
@@ -268,7 +268,7 @@ export default fp(async (fastify: FastifyInstance, options: AuthPluginOptions) =
       if (request.tokenPayload) {
         await authService.logout(request.tokenPayload.userId, request.tokenPayload.sessionId);
       }
-      
+
       reply.send({
         message: 'Logout successful'
       });
@@ -284,16 +284,16 @@ export default fp(async (fastify: FastifyInstance, options: AuthPluginOptions) =
   fastify.post('/api/auth/refresh', async (request, reply) => {
     try {
       const { refreshToken } = request.body as { refreshToken: string };
-      
+
       const tokens = await authService.refreshToken(refreshToken);
-      
+
       reply.send({
         message: 'Token refreshed successfully',
         tokens
       });
     } catch (error) {
       request.log.error(error, 'Token refresh failed');
-      
+
       if (error instanceof Error && error.message.includes('expired')) {
         reply.code(401).send({
           error: ErrorCode.TOKEN_EXPIRED,
@@ -313,7 +313,7 @@ export default fp(async (fastify: FastifyInstance, options: AuthPluginOptions) =
     try {
       const userId = request.user!.id;
       const setup = await authService.setupMFA(userId);
-      
+
       reply.send({
         message: 'MFA setup initiated',
         setup
@@ -331,15 +331,15 @@ export default fp(async (fastify: FastifyInstance, options: AuthPluginOptions) =
     try {
       const userId = request.user!.id;
       const { token } = request.body as { token: string };
-      
+
       await authService.enableMFA(userId, token);
-      
+
       reply.send({
         message: 'MFA enabled successfully'
       });
     } catch (error) {
       request.log.error(error, 'MFA enable failed');
-      
+
       if (error instanceof Error && error.message.includes('Invalid')) {
         reply.code(400).send({
           error: ErrorCode.INVALID_CREDENTIALS,
@@ -358,15 +358,15 @@ export default fp(async (fastify: FastifyInstance, options: AuthPluginOptions) =
     try {
       const userId = request.user!.id;
       const { password } = request.body as { password: string };
-      
+
       await authService.disableMFA(userId, password);
-      
+
       reply.send({
         message: 'MFA disabled successfully'
       });
     } catch (error) {
       request.log.error(error, 'MFA disable failed');
-      
+
       if (error instanceof Error && error.message.includes('Invalid')) {
         reply.code(401).send({
           error: ErrorCode.INVALID_CREDENTIALS,
@@ -396,9 +396,9 @@ export default fp(async (fastify: FastifyInstance, options: AuthPluginOptions) =
     });
   });
 
-  fastify.get('/api/admin/users', { 
-    preHandler: [authenticate, requireRole(UserRole.ADMIN)] 
-  }, async (request, reply) => {
+  fastify.get('/api/admin/users', {
+    preHandler: [authenticate, requireRole(UserRole.ADMIN)]
+  }, async (_request, reply) => {
     reply.send({
       message: 'Admin access granted',
       users: [] // Aquí iría la lógica para obtener usuarios

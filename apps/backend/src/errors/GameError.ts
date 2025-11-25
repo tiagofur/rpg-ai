@@ -1,4 +1,4 @@
-import { ErrorCode } from '../types';
+import { ErrorCode } from '../types/index.js';
 
 export class GameError extends Error {
   constructor(
@@ -81,4 +81,4 @@ export class ServiceUnavailableError extends GameError {
 }
 
 // Re-export ErrorCode from types to maintain compatibility
-export { ErrorCode } from '../types';
+export { ErrorCode } from '../types/index.js';

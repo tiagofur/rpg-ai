@@ -10,8 +10,9 @@ import {
   IGameEffect,
   IGameLogEntry,
   LogLevel,
-  INotification
-} from '../interfaces';
+  INotification,
+  EffectType
+} from '../interfaces.js';
 
 /**
  * Clase base abstracta para todos los comandos del juego
@@ -19,13 +20,20 @@ import {
  */
 export abstract class BaseGameCommand implements IGameCommand {
   readonly id: string;
+
   readonly name: string;
+
   readonly description: string;
-  readonly type: GameCommandType;
+
+  readonly type: CommandType;
+
   readonly cooldownMs: number;
+
   readonly requiredLevel: number;
-  readonly requiredItems?: string[];
-  readonly requiredSkills?: string[];
+
+  readonly requiredItems?: Array<string>;
+
+  readonly requiredSkills?: Array<string>;
 
   constructor(
     name: string,
@@ -36,7 +44,7 @@ export abstract class BaseGameCommand implements IGameCommand {
   ) {
     this.id = uuidv4();
     this.name = name;
-    description = description;
+    this.description = description;
     this.type = type;
     this.cooldownMs = cooldownMs;
     this.requiredLevel = requiredLevel;
@@ -48,8 +56,8 @@ export abstract class BaseGameCommand implements IGameCommand {
    */
   async execute(context: IGameContext): Promise<ICommandResult> {
     const startTime = Date.now();
-    const logEntries: IGameLogEntry[] = [];
-    const notifications: INotification[] = [];
+    const logEntries: Array<IGameLogEntry> = [];
+    const notifications: Array<INotification> = [];
 
     try {
       // Validar comando
@@ -64,7 +72,7 @@ export abstract class BaseGameCommand implements IGameCommand {
 
       // Calcular coste
       const cost = this.calculateCost(context);
-      
+
       // Verificar recursos suficientes
       const canAfford = this.canAffordCost(context, cost);
       if (!canAfford) {
@@ -79,8 +87,8 @@ export abstract class BaseGameCommand implements IGameCommand {
       await this.deductCost(context, cost);
 
       // Ejecutar lógica específica del comando
-      const result = await this.executeLogic(context, logEntries, notifications);
-      
+      const result = await this.executeSpecificCommand(context, logEntries, notifications);
+
       // Registrar ejecución exitosa
       logEntries.push(this.createLogEntry(
         LogLevel.INFO,
@@ -92,7 +100,7 @@ export abstract class BaseGameCommand implements IGameCommand {
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+
       logEntries.push(this.createLogEntry(
         LogLevel.ERROR,
         `Command execution failed: ${errorMessage}`,
@@ -111,9 +119,9 @@ export abstract class BaseGameCommand implements IGameCommand {
    * Valida si el comando puede ser ejecutado en el contexto actual
    */
   validate(context: IGameContext): IValidationResult {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-    const requirements: any[] = [];
+    const errors: Array<string> = [];
+    const warnings: Array<string> = [];
+    const requirements: Array<any> = [];
 
     // Validar nivel mínimo
     if (context.character.level < this.requiredLevel) {
@@ -153,7 +161,7 @@ export abstract class BaseGameCommand implements IGameCommand {
   calculateCost(context: IGameContext): ICommandCost {
     const baseCost = this.calculateBaseCost(context);
     const modifiers = this.calculateCostModifiers(context);
-    
+
     return {
       mana: Math.max(0, (baseCost.mana || 0) * (modifiers.manaMultiplier || 1)),
       stamina: Math.max(0, (baseCost.stamina || 0) * (modifiers.staminaMultiplier || 1)),
@@ -200,10 +208,10 @@ export abstract class BaseGameCommand implements IGameCommand {
   /**
    * Ejecuta la lógica específica del comando
    */
-  protected abstract executeLogic(
+  protected abstract executeSpecificCommand(
     context: IGameContext,
-    logEntries: IGameLogEntry[],
-    notifications: INotification[]
+    logEntries: Array<IGameLogEntry>,
+    notifications: Array<INotification>
   ): Promise<ICommandResult>;
 
   /**
@@ -219,12 +227,14 @@ export abstract class BaseGameCommand implements IGameCommand {
   /**
    * Calcula modificadores del coste (habilidades, items, etc.)
    */
-  protected abstract calculateCostModifiers(context: IGameContext): any;
+  protected calculateCostModifiers(_context: IGameContext): any {
+    return {};
+  }
 
   /**
    * Implementa la lógica de deshacer (opcional)
    */
-  protected async undoLogic(context: IGameContext): Promise<IUndoResult> {
+  protected async undoLogic(_context: IGameContext): Promise<IUndoResult> {
     return {
       success: false,
       message: 'Undo not implemented for this command',
@@ -237,19 +247,19 @@ export abstract class BaseGameCommand implements IGameCommand {
   /**
    * Valida la fase del juego
    */
-  protected validateGamePhase(context: IGameContext): IValidationResult {
+  protected validateGamePhase(_context: IGameContext): IValidationResult {
     return { isValid: true, errors: [], warnings: [], requirements: [] };
   }
 
   /**
    * Valida el cooldown del comando
    */
-  protected validateCooldown(context: IGameContext): IValidationResult {
-    const errors: string[] = [];
-    
+  protected validateCooldown(_context: IGameContext): IValidationResult {
+    const errors: Array<string> = [];
+
     // Aquí iría la lógica para verificar cooldowns
     // Por ejemplo, verificar en Redis o en el estado del personaje
-    
+
     return { isValid: errors.length === 0, errors, warnings: [], requirements: [] };
   }
 
@@ -257,63 +267,63 @@ export abstract class BaseGameCommand implements IGameCommand {
    * Verifica si el personaje puede pagar el coste
    */
   protected canAffordCost(context: IGameContext, cost: ICommandCost): boolean {
-    const character = context.character;
-    
+    const {character} = context;
+
     // Verificar mana
     if (cost.mana && character.mana.current < cost.mana) {
       return false;
     }
-    
+
     // Verificar stamina
     if (cost.stamina && character.stamina.current < cost.stamina) {
       return false;
     }
-    
+
     // Verificar salud
     if (cost.health && character.health.current <= cost.health) {
       return false;
     }
-    
+
     // Verificar oro
     if (cost.gold && character.inventory.gold < cost.gold) {
       return false;
     }
-    
+
     // Verificar items
     if (cost.items && cost.items.length > 0) {
       // Aquí iría la lógica para verificar items específicos
     }
-    
+
     return true;
   }
 
   /**
    * Deduce el coste del personaje
    */
-  protected async deductCost(context: IGameContext, cost: ICommandCost): Promise<void> {
+  protected async deductCost(_context: IGameContext, cost: ICommandCost): Promise<void> {
     // Esta lógica debería ser atómica y manejada por el GameEngine
     // Aquí solo definimos qué costes se deben deducir
-    
+
     if (cost.mana) {
       // Deducir mana
     }
-    
+
     if (cost.stamina) {
       // Deducir stamina
     }
-    
+
     if (cost.health) {
       // Deducir salud
     }
-    
+
     if (cost.gold) {
       // Deducir oro
     }
-    
+
     if (cost.items && cost.items.length > 0) {
       // Consumir items
     }
-    
+
     if (cost.cooldownMs && cost.cooldownMs > 0) {
       // Aplicar cooldown
     }
@@ -324,12 +334,12 @@ export abstract class BaseGameCommand implements IGameCommand {
    */
   protected createSuccessResult(
     message: string,
-    effects: IGameEffect[] = [],
-    rewards: any[] = [],
+    effects: Array<IGameEffect> = [],
+    rewards: Array<any> = [],
     experienceGained: number = 0,
     newState?: Partial<any>,
-    logEntries: IGameLogEntry[] = [],
-    notifications: INotification[] = []
+    logEntries: Array<IGameLogEntry> = [],
+    notifications: Array<INotification> = []
   ): ICommandResult {
     return {
       success: true,
@@ -338,7 +348,7 @@ export abstract class BaseGameCommand implements IGameCommand {
       effects,
       rewards,
       experienceGained,
-      newState,
+      ...(newState ? { newState } : {}),
       logEntries,
       notifications
     };
@@ -349,8 +359,8 @@ export abstract class BaseGameCommand implements IGameCommand {
    */
   protected createFailureResult(
     message: string,
-    logEntries: IGameLogEntry[] = [],
-    notifications: INotification[] = []
+    logEntries: Array<IGameLogEntry> = [],
+    notifications: Array<INotification> = []
   ): ICommandResult {
     return {
       success: false,
@@ -359,7 +369,6 @@ export abstract class BaseGameCommand implements IGameCommand {
       effects: [],
       rewards: [],
       experienceGained: 0,
-      newState: undefined,
       logEntries,
       notifications
     };
@@ -379,7 +388,7 @@ export abstract class BaseGameCommand implements IGameCommand {
       level,
       category: 'command',
       message,
-      data
+      ...(data ? { data } : {})
     };
   }
 
@@ -407,7 +416,7 @@ export abstract class BaseGameCommand implements IGameCommand {
       id: uuidv4(),
       name: 'Physical Damage',
       description: `Deals ${damage} physical damage`,
-      type: 'damage',
+      type: EffectType.DAMAGE_OVER_TIME,
       duration: 0,
       remainingDuration: 0,
       magnitude: damage,

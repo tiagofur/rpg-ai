@@ -5,9 +5,9 @@ export interface IQuest {
   type: QuestType;
   difficulty: QuestDifficulty;
   levelRequirement: number;
-  prerequisites?: string[];
-  objectives: IQuestObjective[];
-  rewards: IQuestReward[];
+  prerequisites?: Array<string>;
+  objectives: Array<IQuestObjective>;
+  rewards: Array<IQuestReward>;
   timeLimit?: number;
   repeatable: boolean;
   maxRepeats?: number;
@@ -42,7 +42,7 @@ export interface IQuestProgress {
   id: string;
   userId: string;
   questId: string;
-  objectives: IQuestObjective[];
+  objectives: Array<IQuestObjective>;
   status: QuestStatus;
   startedAt: Date;
   completedAt?: Date;
@@ -58,8 +58,8 @@ export interface IAchievement {
   rarity: AchievementRarity;
   icon?: string;
   points: number;
-  requirements: IAchievementRequirement[];
-  rewards?: IAchievementReward[];
+  requirements: Array<IAchievementRequirement>;
+  rewards?: Array<IAchievementReward>;
   hidden: boolean;
   metadata?: Record<string, any>;
   createdAt: Date;
@@ -119,7 +119,7 @@ export interface ILeaderboardEntry {
 
 export interface ILeaderboardRanking {
   leaderboard: ILeaderboard;
-  entries: ILeaderboardEntry[];
+  entries: Array<ILeaderboardEntry>;
   totalEntries: number;
   userRank?: ILeaderboardEntry;
   lastReset?: Date;

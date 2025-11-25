@@ -7,15 +7,273 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Session {
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  MODERATOR
+  PREMIUM_USER
+  USER
+  GUEST
+}
+
+enum AuthStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  BANNED
+  PENDING_VERIFICATION
+}
+
+enum SubscriptionPlan {
+  FREE
+  BASIC
+  PREMIUM
+  SUPREME
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  UNPAID
+  INCOMPLETE
+  EXPIRED
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+}
+
+model User {
+  id            String    @id @default(uuid()) @map("_id")
+  email         String    @unique
+  username      String    @unique
+  password      String
+  displayName   String?
+  role          UserRole  @default(USER)
+  status        AuthStatus @default(PENDING_VERIFICATION)
+  
+  // Auth fields
+  mfaEnabled    Boolean   @default(false)
+  mfaSecret     String?
+  lastLoginAt   DateTime?
+  loginAttempts Int       @default(0)
+  lockedUntil   DateTime?
+  
+  // Stripe fields
+  stripeCustomerId String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  subscription  Subscription?
+  sessions      GameSession[]
+  transactions  Transaction[]
+  characters    Character[]
+  backupCodes   BackupCode[]
+  guildMemberships GuildMember[]
+}
+
+enum ItemRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+  MYTHIC
+}
+
+enum ItemType {
+  WEAPON
+  ARMOR
+  CONSUMABLE
+  MATERIAL
+  QUEST
+  MISC
+}
+
+enum QuestStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+model ItemTemplate {
+  id          String     @id @default(uuid()) @map("_id")
+  name        String
+  description String
+  type        ItemType
+  rarity      ItemRarity
+  baseValue   Int
+  stackable   Boolean    @default(false)
+  weight      Float      @default(0.1)
+  
+  // Stats (JSON for flexibility: { attack: 10, defense: 5, etc. })
+  stats       Json?
+  
+  // Requirements (JSON: { level: 5, class: "Warrior" })
+  requirements Json?
+  
+  // Effects (JSON array of effect definitions)
+  effects     Json?
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  inventoryItems InventoryItem[]
+  lootTables     LootTableItem[]
+}
+
+model InventoryItem {
+  id             String       @id @default(uuid()) @map("_id")
+  characterId    String
+  itemTemplateId String
+  
+  quantity       Int          @default(1)
+  isEquipped     Boolean      @default(false)
+  
+  // Instance specific data (durability, specific enchantments)
+  instanceData   Json?
+  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  character      Character    @relation(fields: [characterId], references: [id])
+  template       ItemTemplate @relation(fields: [itemTemplateId], references: [id])
+}
+
+model LootTable {
+  id          String          @id @default(uuid()) @map("_id")
+  name        String
+  description String?
+  
+  items       LootTableItem[]
+  
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model LootTableItem {
+  id             String       @id @default(uuid()) @map("_id")
+  lootTableId    String
+  itemTemplateId String
+  
+  chance         Float        // 0.0 to 1.0
+  minQuantity    Int          @default(1)
+  maxQuantity    Int          @default(1)
+  
+  lootTable      LootTable    @relation(fields: [lootTableId], references: [id])
+  itemTemplate   ItemTemplate @relation(fields: [itemTemplateId], references: [id])
+}
+
+model EnemyTemplate {
+  id          String   @id @default(uuid()) @map("_id")
+  name        String
+  description String
+  level       Int
+  type        String   // Beast, Humanoid, Undead, etc.
+  
+  // Base stats
+  health      Int
+  mana        Int
+  attack      Int
+  defense     Int
+  experience  Int      // XP given on kill
+  
+  // AI Behavior config
+  aiBehavior  Json?
+  
+  // Loot
+  lootTableId String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model QuestTemplate {
+  id          String   @id @default(uuid()) @map("_id")
+  title       String
+  description String
+  minLevel    Int      @default(1)
+  
+  // Objectives (JSON: [{ type: "KILL", target: "orc_id", count: 5 }])
+  objectives  Json
+  
+  // Rewards (JSON: { xp: 100, gold: 50, items: [...] })
+  rewards     Json
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  instances   QuestInstance[]
+}
+
+model QuestInstance {
+  id              String        @id @default(uuid()) @map("_id")
+  characterId     String
+  questTemplateId String
+  
+  status          QuestStatus   @default(IN_PROGRESS)
+  progress        Json          // Tracks current progress of objectives
+  
+  startedAt       DateTime      @default(now())
+  completedAt     DateTime?
+  
+  character       Character     @relation(fields: [characterId], references: [id])
+  template        QuestTemplate @relation(fields: [questTemplateId], references: [id])
+}
+
+model BackupCode {
+  id        String   @id @default(uuid()) @map("_id")
+  userId    String
+  code      String
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Subscription {
+  id                   String             @id @default(uuid()) @map("_id")
+  userId               String             @unique
+  plan                 SubscriptionPlan
+  status               SubscriptionStatus
+  billingInterval      BillingInterval
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean
+  canceledAt           DateTime?
+  stripeSubscriptionId String             @unique
+  stripeCustomerId     String
+  defaultPaymentMethod String?
+  
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user                 User               @relation(fields: [userId], references: [id])
+}
+
+model GameSession {
   id          String      @id @map("_id")
   ownerId     String
+  activeCharacterId String?
   title       String
   summary     String?
   seed        Int
-  currentTurn Int          @default(0)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  currentTurn Int         @default(0)
+  state       Json?
+  undoStack   Json?
+  redoStack   Json?
+  lastActivity DateTime   @default(now())
+  isActive    Boolean     @default(true)
+  settings    Json?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  owner       User        @relation(fields: [ownerId], references: [id])
   characters  Character[]
 }
 
@@ -34,7 +292,57 @@ model Character {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  session Session @relation(fields: [sessionId], references: [id])
+  session     GameSession @relation(fields: [sessionId], references: [id])
+  player      User        @relation(fields: [playerId], references: [id])
+
+  inventoryItems InventoryItem[]
+  quests         QuestInstance[]
 
   @@index([sessionId])
+}
+
+model Transaction {
+  id                    String   @id @default(uuid()) @map("_id")
+  userId                String
+  amount                Float
+  currency              String
+  type                  String
+  status                String
+  stripePaymentIntentId String?
+  metadata              Json?
+  
+  createdAt             DateTime @default(now())
+  
+  user                  User     @relation(fields: [userId], references: [id])
+}
+
+model Guild {
+  id          String   @id @default(uuid()) @map("_id")
+  name        String   @unique
+  description String?
+  tag         String   @unique
+  level       Int      @default(1)
+  experience  Int      @default(0)
+  resources   Json     // { gold: 0, wood: 0, etc. }
+  technology  String[] // IDs of unlocked tech
+  
+  ownerId     String
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     GuildMember[]
+}
+
+model GuildMember {
+  id        String   @id @default(uuid()) @map("_id")
+  guildId   String
+  userId    String
+  role      String   // 'owner', 'officer', 'member'
+  joinedAt  DateTime @default(now())
+  
+  guild     Guild    @relation(fields: [guildId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([guildId, userId])
 }

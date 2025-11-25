@@ -1,23 +1,26 @@
-import { EventEmitter } from 'events';
-import { IAchievement, IAchievementProgress, AchievementType, AchievementCategory, AchievementRarity } from '../../interfaces/IAchievement';
-import { IWebSocketManager } from '../../websocket/interfaces/IWebSocketManager';
-import { GameError, ErrorCode } from '../../errors/GameError';
-import { IRedisClient } from '../../cache/interfaces/IRedisClient';
-import { ILogger } from '../../logging/interfaces/ILogger';
+import { EventEmitter } from 'node:events';
+import { IAchievement, IAchievementProgress, AchievementType, AchievementCategory, AchievementRarity } from '../../interfaces/IAchievement.js';
+import { IWebSocketManager } from '../../websocket/interfaces/IWebSocketManager.js';
+import { GameError, ErrorCode } from '../../errors/GameError.js';
+import { IRedisClient } from '../../cache/interfaces/IRedisClient.js';
+import { ILogger } from '../../logging/interfaces/ILogger.js';
 
 export interface IAchievementService {
   initialize(): Promise<void>;
-  checkAchievements(userId: string, eventType: string, eventData: any): Promise<IAchievementProgress[]>;
-  getUserAchievements(userId: string): Promise<IAchievementProgress[]>;
+  checkAchievements(userId: string, eventType: string, eventData: any): Promise<Array<IAchievementProgress>>;
+  getUserAchievements(userId: string): Promise<Array<IAchievementProgress>>;
   getAchievementById(achievementId: string): Promise<IAchievement | null>;
   unlockAchievement(userId: string, achievementId: string): Promise<IAchievementProgress>;
   getLeaderboard(category?: AchievementCategory): Promise<Array<{ userId: string; points: number; achievements: number }>>;
 }
 
 export class AchievementService extends EventEmitter implements IAchievementService {
-  private achievements: Map<string, IAchievement> = new Map();
+  private readonly achievements: Map<string, IAchievement> = new Map();
+
   private readonly ACHIEVEMENTS_KEY = 'achievements:definitions';
+
   private readonly USER_ACHIEVEMENTS_KEY = 'achievements:user:';
+
   private readonly LEADERBOARD_KEY = 'achievements:leaderboard';
 
   constructor(
@@ -45,7 +48,7 @@ export class AchievementService extends EventEmitter implements IAchievementServ
   private async loadAchievements(): Promise<void> {
     // Load from Redis cache first
     const cachedAchievements = await this.redis.get(this.ACHIEVEMENTS_KEY);
-    
+
     if (cachedAchievements) {
       const achievements = JSON.parse(cachedAchievements);
       achievements.forEach((achievement: IAchievement) => {
@@ -58,7 +61,7 @@ export class AchievementService extends EventEmitter implements IAchievementServ
   }
 
   private async loadDefaultAchievements(): Promise<void> {
-    const defaultAchievements: IAchievement[] = [
+    const defaultAchievements: Array<IAchievement> = [
       // Combat Achievements
       {
         id: 'first_blood',
@@ -250,9 +253,9 @@ export class AchievementService extends EventEmitter implements IAchievementServ
       }
     ];
 
-    defaultAchievements.forEach(achievement => {
+    for (const achievement of defaultAchievements) {
       this.achievements.set(achievement.id, achievement);
-    });
+    }
 
     // Cache achievements
     await this.redis.setex(
@@ -262,10 +265,10 @@ export class AchievementService extends EventEmitter implements IAchievementServ
     );
   }
 
-  async checkAchievements(userId: string, eventType: string, eventData: any): Promise<IAchievementProgress[]> {
+  async checkAchievements(userId: string, eventType: string, eventData: any): Promise<Array<IAchievementProgress>> {
     try {
       const userAchievements = await this.getUserAchievements(userId);
-      const unlockedAchievements: IAchievementProgress[] = [];
+      const unlockedAchievements: Array<IAchievementProgress> = [];
 
       for (const [achievementId, achievement] of this.achievements) {
         // Skip if already unlocked
@@ -277,7 +280,7 @@ export class AchievementService extends EventEmitter implements IAchievementServ
         // Check if achievement conditions are met
         if (this.shouldCheckAchievement(achievement, eventType, eventData)) {
           const progress = await this.updateAchievementProgress(userId, achievement, eventData);
-          
+
           if (progress.unlocked) {
             unlockedAchievements.push(progress);
             await this.notifyAchievementUnlocked(userId, achievement, progress);
@@ -300,16 +303,20 @@ export class AchievementService extends EventEmitter implements IAchievementServ
     if (!achievement.conditions) {
       return false;
     }
-    return achievement.conditions.some(condition => {
+    return achievement.conditions.some((condition: any) => {
       switch (condition.type) {
-        case 'event':
+        case 'event': {
           return condition.eventType === eventType;
-        case 'stat':
+        }
+        case 'stat': {
           return this.checkStatCondition(condition, eventData);
-        case 'collection':
+        }
+        case 'collection': {
           return this.checkCollectionCondition(condition, eventData);
-        default:
+        }
+        default: {
           return false;
+        }
       }
     });
   }
@@ -325,13 +332,10 @@ export class AchievementService extends EventEmitter implements IAchievementServ
   private async updateAchievementProgress(userId: string, achievement: IAchievement, eventData: any): Promise<IAchievementProgress> {
     const progressKey = `${this.USER_ACHIEVEMENTS_KEY}${userId}:${achievement.id}`;
     const existingProgress = await this.redis.get(progressKey);
-    
+
     let progress: IAchievementProgress;
-    
-    if (existingProgress) {
-      progress = JSON.parse(existingProgress);
-    } else {
-      progress = {
+
+    progress = existingProgress ? JSON.parse(existingProgress) : {
         userId,
         achievementId: achievement.id,
         progress: 0,
@@ -339,51 +343,61 @@ export class AchievementService extends EventEmitter implements IAchievementServ
         unlockedAt: null,
         progressData: {}
       };
-    }
 
     // Update progress based on achievement type
     switch (achievement.type) {
-      case AchievementType.PROGRESSIVE:
+      case AchievementType.PROGRESSIVE: {
         (progress as any).progress += this.getEventContribution(achievement, eventData);
         break;
-      
-      case AchievementType.COLLECTION:
+      }
+
+      case AchievementType.COLLECTION: {
         progress = this.updateCollectionProgress(progress, achievement, eventData);
         break;
-      
-      case AchievementType.SINGLE:
+      }
+
+      case AchievementType.SINGLE: {
         (progress as any).progress = 1;
         break;
+      }
     }
 
     // Check if achievement is unlocked
     if ((progress as any).progress >= (achievement.requirement || 0)) {
       (progress as any).unlocked = true;
-      (progress as any).unlockedAt = new Date().toISOString();
+      (progress as any).unlockedAt = new Date();
     }
 
     // Save progress
-    await this.redis.setex(progressKey, 86400, JSON.stringify(progress)); // 24 hour TTL
+    await this.redis.setex(progressKey, 86_400, JSON.stringify(progress)); // 24 hour TTL
 
     return progress;
   }
 
   private getEventContribution(achievement: IAchievement, eventData: any): number {
-    const condition = achievement.conditions.find(c => c.eventType === eventData.type);
+    const condition = achievement.conditions?.find((c: any) => c.eventType === eventData.type);
     return condition?.count || 1;
   }
 
   private updateCollectionProgress(progress: IAchievementProgress, achievement: IAchievement, eventData: any): IAchievementProgress {
-    if (!progress.progressData.collectedItems) {
-      progress.progressData.collectedItems = [];
+    if (!progress.progressData) {
+      progress = { ...progress, progressData: {} };
     }
 
-    const collectedItems = progress.progressData.collectedItems as string[];
-    const condition = achievement.conditions.find(c => c.type === 'collection');
-    
-    if (condition && condition.items.includes(eventData.itemId) && !collectedItems.includes(eventData.itemId)) {
+    if (!progress.progressData!['collectedItems']) {
+      progress.progressData!['collectedItems'] = [];
+    }
+
+    const collectedItems = progress.progressData!['collectedItems'] as Array<string>;
+    const condition = achievement.conditions?.find((c: any) => c.type === 'collection');
+
+    if (condition && condition.items?.includes(eventData.itemId) && !collectedItems.includes(eventData.itemId)) {
       collectedItems.push(eventData.itemId);
-      progress.progress = collectedItems.length;
+      // Create a new object to avoid read-only error
+      return {
+        ...progress,
+        progress: collectedItems.length
+      };
     }
 
     return progress;
@@ -408,7 +422,7 @@ export class AchievementService extends EventEmitter implements IAchievementServ
       }
     };
 
-    await this.websocketManager.sendToUser(userId, notification);
+    await this.websocketManager.sendToUser(userId, notification.type, notification.data);
 
     // Emit event for analytics
     this.emit('achievement_unlocked', {
@@ -423,13 +437,13 @@ export class AchievementService extends EventEmitter implements IAchievementServ
     await this.updateLeaderboard(userId);
   }
 
-  async getUserAchievements(userId: string): Promise<IAchievementProgress[]> {
+  async getUserAchievements(userId: string): Promise<Array<IAchievementProgress>> {
     try {
       const pattern = `${this.USER_ACHIEVEMENTS_KEY}${userId}:*`;
       const keys = await this.redis.keys(pattern);
-      
-      const achievements: IAchievementProgress[] = [];
-      
+
+      const achievements: Array<IAchievementProgress> = [];
+
       for (const key of keys) {
         const data = await this.redis.get(key);
         if (data) {
@@ -465,14 +479,14 @@ export class AchievementService extends EventEmitter implements IAchievementServ
     const progress: IAchievementProgress = {
       userId,
       achievementId,
-      progress: achievement.requirement,
+      progress: achievement.requirement || 1,
       unlocked: true,
-      unlockedAt: new Date().toISOString(),
+      unlockedAt: new Date(),
       progressData: {}
     };
 
     const progressKey = `${this.USER_ACHIEVEMENTS_KEY}${userId}:${achievementId}`;
-    await this.redis.setex(progressKey, 86400, JSON.stringify(progress));
+    await this.redis.setex(progressKey, 86_400, JSON.stringify(progress));
 
     await this.notifyAchievementUnlocked(userId, achievement, progress);
 
@@ -487,7 +501,7 @@ export class AchievementService extends EventEmitter implements IAchievementServ
       }
 
       const leaderboardData = await this.redis.get(leaderboardKey);
-      
+
       if (leaderboardData) {
         return JSON.parse(leaderboardData);
       }
@@ -504,13 +518,13 @@ export class AchievementService extends EventEmitter implements IAchievementServ
     }
   }
 
-  private async generateLeaderboard(category?: AchievementCategory): Promise<Array<{ userId: string; points: number; achievements: number }>> {
+  private async generateLeaderboard(_category?: AchievementCategory): Promise<Array<{ userId: string; points: number; achievements: number }>> {
     // This is a simplified implementation
     // In a real system, you'd query a database for all users
     // const leaderboard: string[] = []; // Placeholder for actual leaderboard data
-    
+
     const results: Array<{ userId: string; points: number; achievements: number }> = [];
-    
+
     // For now, return empty array as we don't have real leaderboard data
     // In a real implementation, this would query user data from database
     return results;
@@ -534,10 +548,10 @@ export class AchievementService extends EventEmitter implements IAchievementServ
 
   private async updateLeaderboard(userId: string): Promise<void> {
     const totalPoints = await this.getUserTotalPoints(userId);
-    
-    // Update sorted set - Note: zadd method needs to be added to IRedisClient interface
-    // await this.redis.zadd(`${this.LEADERBOARD_KEY}:sorted`, totalPoints, userId);
-    
+
+    // Update sorted set
+    await this.redis.zadd(`${this.LEADERBOARD_KEY}:sorted`, totalPoints, userId);
+
     // Cache leaderboard for 5 minutes
     const leaderboard = await this.generateLeaderboard();
     await this.redis.setex(this.LEADERBOARD_KEY, 300, JSON.stringify(leaderboard));

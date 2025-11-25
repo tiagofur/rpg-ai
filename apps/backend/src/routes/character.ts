@@ -3,10 +3,10 @@ import type { FastifyInstance } from "fastify";
 import {
   createCharacterInputSchema,
   createCharacterResponseSchema
-} from "@rpg-ai/shared";
+} from "../shared/index.js";
 
-import { generateCharacterSheet } from "../services/character-generator";
-import { serializeCharacter } from "../utils/serializers";
+import { generateCharacterSheet } from "../services/CharacterGenerator.js";
+import { serializeCharacter } from "../utils/serializers.js";
 
 const RNG_MAX = 2 ** 32;
 
@@ -21,12 +21,12 @@ export async function registerCharacterRoutes(fastify: FastifyInstance) {
     const { sessionId, playerId, prompt, seed } = parsed.data;
 
     try {
-      const session = await fastify.prisma.session.findUnique({
+      const session = await fastify.prisma.gameSession.findUnique({
         where: { id: sessionId }
       });
 
       if (!session) {
-        return reply.status(404).send({ error: { message: "SESSION_NOT_FOUND" } });
+        return await reply.status(404).send({ error: { message: "SESSION_NOT_FOUND" } });
       }
 
       const characterSeed = seed ?? randomInt(RNG_MAX);
@@ -52,10 +52,29 @@ export async function registerCharacterRoutes(fastify: FastifyInstance) {
         character: serializeCharacter(created)
       });
 
-      return reply.status(201).send(payload);
+      return await reply.status(201).send(payload);
     } catch (error) {
       request.log.error({ err: error }, "Failed to create character");
       return reply.status(500).send({ error: { message: "CHARACTER_CREATE_FAILED" } });
+    }
+  });
+
+  fastify.get("/api/character/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    try {
+      const character = await fastify.prisma.character.findUnique({
+        where: { id }
+      });
+
+      if (!character) {
+        return await reply.status(404).send({ error: { message: "CHARACTER_NOT_FOUND" } });
+      }
+
+      return await reply.send({ character: serializeCharacter(character) });
+    } catch (error) {
+      request.log.error({ err: error }, "Failed to get character");
+      return reply.status(500).send({ error: { message: "CHARACTER_GET_FAILED" } });
     }
   });
 }

@@ -14,29 +14,29 @@ export interface IGameCommand {
   readonly type: CommandType;
   readonly cooldownMs: number;
   readonly requiredLevel: number;
-  readonly requiredItems?: UUID[];
-  readonly requiredSkills?: string[];
-  
+  readonly requiredItems?: Array<UUID>;
+  readonly requiredSkills?: Array<string>;
+
   /**
    * Ejecuta el comando en el contexto proporcionado
    */
   execute(context: IGameContext): Promise<ICommandResult>;
-  
+
   /**
    * Valida si el comando puede ser ejecutado
    */
   validate(context: IGameContext): IValidationResult;
-  
+
   /**
    * Calcula el coste de ejecutar el comando
    */
   calculateCost(context: IGameContext): ICommandCost;
-  
+
   /**
    * Determina si el comando puede ser deshecho
    */
   canUndo(): boolean;
-  
+
   /**
    * Deshace el comando si es posible
    */
@@ -73,8 +73,8 @@ export interface IGameState {
   readonly sessionId: UUID;
   readonly currentTurn: number;
   readonly phase: GamePhase;
-  readonly activeEffects: IGameEffect[];
-  readonly history: IGameEvent[];
+  readonly activeEffects: Array<IGameEffect>;
+  readonly history: Array<IGameEvent>;
   readonly entities: Record<UUID, IGameEntity>;
   readonly combat?: ICombatState;
   readonly dialogue?: IDialogueState;
@@ -88,12 +88,12 @@ export interface ICommandResult {
   readonly success: boolean;
   readonly commandId: UUID;
   readonly message: string;
-  readonly effects: IGameEffect[];
-  readonly rewards?: IReward[];
+  readonly effects: Array<IGameEffect>;
+  readonly rewards?: Array<IReward>;
   readonly experienceGained?: number;
   readonly newState?: Partial<IGameState>;
-  readonly logEntries: IGameLogEntry[];
-  readonly notifications: INotification[];
+  readonly logEntries: Array<IGameLogEntry>;
+  readonly notifications: Array<INotification>;
 }
 
 /**
@@ -101,9 +101,9 @@ export interface ICommandResult {
  */
 export interface IValidationResult {
   readonly isValid: boolean;
-  readonly errors: string[];
-  readonly warnings: string[];
-  readonly requirements: IRequirementCheck[];
+  readonly errors: Array<string>;
+  readonly warnings: Array<string>;
+  readonly requirements: Array<IRequirementCheck>;
 }
 
 /**
@@ -114,7 +114,7 @@ export interface ICommandCost {
   readonly stamina?: number;
   readonly health?: number;
   readonly gold?: number;
-  readonly items?: IItemCost[];
+  readonly items?: Array<IItemCost>;
   readonly cooldownMs?: number;
 }
 
@@ -125,7 +125,7 @@ export interface IUndoResult {
   readonly success: boolean;
   readonly message: string;
   readonly restoredState?: Partial<IGameState>;
-  readonly logEntries: IGameLogEntry[];
+  readonly logEntries: Array<IGameLogEntry>;
 }
 
 /**
@@ -147,21 +147,25 @@ export interface ICharacter {
   readonly id: UUID;
   readonly name: string;
   readonly level: number;
+  readonly class: string;
+  readonly experience: number;
   readonly health: IAttribute;
   readonly mana: IAttribute;
   readonly stamina: IAttribute;
   readonly attributes: ICharacterAttributes;
   readonly skills: Record<string, ISkill>;
+  readonly spells?: Array<ISpell>;
   readonly inventory: IInventory;
   readonly equipment: IEquipment;
-  readonly effects: IGameEffect[];
+  readonly effects: Array<IGameEffect>;
   readonly faction?: string;
   readonly isPlayer: boolean;
   readonly isHostile: boolean;
   readonly aiBehavior?: IAIBehavior;
-  readonly status?: string[];
+  readonly status?: Array<string>;
   readonly position?: IPosition;
   readonly userId?: UUID;
+  readonly resistances?: Record<string, number>;
 }
 
 /**
@@ -201,12 +205,44 @@ export interface ISkill {
 }
 
 /**
+ * Hechizo
+ */
+export interface ISpell {
+  readonly id: UUID;
+  readonly name: string;
+  readonly description: string;
+  readonly level: number;
+  readonly school: string;
+  readonly manaCost: number;
+  readonly cooldown: number;
+  readonly lastCast?: Date;
+  readonly requiredLevel: number;
+  readonly requiresTarget: boolean;
+  readonly targetType: 'self' | 'enemy' | 'ally' | 'area';
+  readonly canTargetDead?: boolean;
+  readonly components?: Array<IItemCost>;
+  readonly effects?: Array<ISpellEffect>;
+}
+
+/**
+ * Efecto de hechizo
+ */
+export interface ISpellEffect {
+  readonly type: string;
+  readonly subtype?: string;
+  readonly damageType?: string;
+  readonly baseValue: number;
+  readonly duration?: number;
+  readonly location?: IPosition;
+}
+
+/**
  * Inventario del personaje
  */
 export interface IInventory {
   readonly maxCapacity: number;
   readonly currentWeight: number;
-  readonly items: IItem[];
+  readonly items: Array<IItem>;
   readonly gold: number;
 }
 
@@ -235,7 +271,7 @@ export interface IGameObject {
   readonly type: string;
   readonly isInteractable: boolean;
   readonly isCollectible: boolean;
-  readonly effects?: IGameEffect[];
+  readonly effects?: Array<IGameEffect>;
   readonly script?: string;
 }
 
@@ -248,8 +284,8 @@ export interface IItem extends IGameObject {
   readonly weight: number;
   readonly stackable: boolean;
   readonly quantity: number;
-  readonly requirements?: IRequirementCheck[];
-  readonly effects?: IGameEffect[];
+  readonly requirements?: Array<IRequirementCheck>;
+  readonly effects?: Array<IGameEffect>;
   readonly durability?: IDurability;
   readonly stats?: IItemStats;
 }
@@ -263,9 +299,9 @@ export interface ILocation {
   readonly description: string;
   readonly type: LocationType;
   readonly coordinates: ICoordinates;
-  readonly connections: UUID[];
-  readonly objects: IGameObject[];
-  readonly characters: ICharacter[];
+  readonly connections: Array<UUID>;
+  readonly objects: Array<IGameObject>;
+  readonly characters: Array<ICharacter>;
   readonly weather?: IWeather;
   readonly timeOfDay?: string;
 }
@@ -286,7 +322,7 @@ export interface IParty {
   readonly id: UUID;
   readonly name: string;
   readonly leaderId: UUID;
-  readonly members: UUID[];
+  readonly members: Array<UUID>;
   readonly maxSize: number;
   readonly sharedExperience: boolean;
   readonly sharedLoot: boolean;
@@ -310,13 +346,13 @@ export interface IPosition {
  */
 export interface ICombatState {
   readonly combatId: UUID;
-  readonly participants: ICombatParticipant[];
-  readonly turnOrder: UUID[];
+  readonly participants: Array<ICombatParticipant>;
+  readonly turnOrder: Array<UUID>;
   readonly currentTurn: number;
   readonly currentParticipant: UUID;
   readonly round: number;
   readonly phase: CombatPhase;
-  readonly log: ICombatLogEntry[];
+  readonly log: Array<ICombatLogEntry>;
 }
 
 /**
@@ -337,8 +373,8 @@ export interface ICombatParticipant {
 export interface IDialogueState {
   readonly dialogueId: UUID;
   readonly npcId: UUID;
-  readonly availableResponses: IDialogueResponse[];
-  readonly dialogueHistory: IDialogueEntry[];
+  readonly availableResponses: Array<IDialogueResponse>;
+  readonly dialogueHistory: Array<IDialogueEntry>;
   readonly currentNode: string;
 }
 
@@ -348,8 +384,8 @@ export interface IDialogueState {
 export interface ITradeState {
   readonly tradeId: UUID;
   readonly merchantId: UUID;
-  readonly playerItems: ITradeItem[];
-  readonly merchantItems: ITradeItem[];
+  readonly playerItems: Array<ITradeItem>;
+  readonly merchantItems: Array<ITradeItem>;
   readonly totalCost: number;
   readonly currency: string;
 }
@@ -370,6 +406,8 @@ export interface IGameEffect {
   readonly currentStacks: number;
   readonly sourceId: UUID;
   readonly targetId: UUID;
+  readonly statModifiers?: Record<string, number>;
+  readonly metadata?: Record<string, unknown>;
 }
 
 /**
@@ -379,6 +417,7 @@ export interface IReward {
   readonly type: 'experience' | 'gold' | 'item' | 'skill' | 'reputation';
   readonly amount: number;
   readonly itemId?: UUID;
+  readonly item?: IItem;
   readonly description: string;
 }
 
@@ -451,12 +490,59 @@ export interface IItemStats {
 }
 
 /**
+ * Plantilla de item
+ */
+export interface IItemTemplate {
+  readonly id: UUID;
+  readonly name: string;
+  readonly description: string;
+  readonly type: string;
+  readonly rarity: Rarity;
+  readonly baseValue: number;
+  readonly stackable: boolean;
+  readonly weight: number;
+  readonly stats?: IItemStats;
+  readonly requirements?: Record<string, unknown>;
+  readonly effects?: Array<unknown>;
+}
+
+/**
+ * Plantilla de enemigo
+ */
+export interface IEnemyTemplate {
+  readonly id: UUID;
+  readonly name: string;
+  readonly description: string;
+  readonly level: number;
+  readonly type: string;
+  readonly health: number;
+  readonly mana: number;
+  readonly attack: number;
+  readonly defense: number;
+  readonly experience: number;
+  readonly aiBehavior?: Record<string, unknown>;
+  readonly lootTableId?: string;
+}
+
+/**
+ * Plantilla de misión
+ */
+export interface IQuestTemplate {
+  readonly id: UUID;
+  readonly title: string;
+  readonly description: string;
+  readonly minLevel: number;
+  readonly objectives: Array<unknown>;
+  readonly rewards: Record<string, unknown>;
+}
+
+/**
  * Comportamiento AI
  */
 export interface IAIBehavior {
   readonly type: 'aggressive' | 'defensive' | 'neutral' | 'friendly';
   readonly difficulty: 'easy' | 'medium' | 'hard' | 'legendary';
-  readonly preferredActions: CommandType[];
+  readonly preferredActions: Array<CommandType>;
   readonly reactionRadius: number;
   readonly combatStrategy: string;
 }
@@ -488,8 +574,8 @@ export interface IDialogueResponse {
   readonly id: UUID;
   readonly text: string;
   readonly nextNode?: string;
-  readonly requirements?: IRequirementCheck[];
-  readonly effects?: IGameEffect[];
+  readonly requirements?: Array<IRequirementCheck>;
+  readonly effects?: Array<IGameEffect>;
 }
 
 /**
@@ -514,7 +600,7 @@ export interface ICombatLogEntry {
   readonly damage?: number;
   readonly hitChance?: number;
   readonly critical?: boolean;
-  readonly effects?: IGameEffect[];
+  readonly effects?: Array<IGameEffect>;
 }
 
 /**
@@ -539,6 +625,7 @@ export enum CommandType {
   MOVE = 'move',
   EXPLORE = 'explore',
   SEARCH = 'search',
+  LOOT = 'loot',
   INTERACT = 'interact',
   TALK = 'talk',
   TRADE = 'trade',
@@ -551,6 +638,7 @@ export enum CommandType {
   GENERATE_NARRATIVE = 'generate_narrative',
   GENERATE_IMAGE = 'generate_image',
   ANALYZE_IMAGE = 'analyze_image',
+  RESPAWN = 'respawn',
   CUSTOM = 'custom',
   SYSTEM = 'system'
 }
@@ -593,6 +681,8 @@ export enum LogLevel {
 export enum EffectType {
   BUFF = 'buff',
   DEBUFF = 'debuff',
+  DAMAGE = 'damage',
+  HEAL = 'heal',
   DAMAGE_OVER_TIME = 'damage_over_time',
   HEAL_OVER_TIME = 'heal_over_time',
   STUN = 'stun',

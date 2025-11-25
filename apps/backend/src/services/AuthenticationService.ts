@@ -2,37 +2,28 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { authenticator } from 'otplib';
 import qrcode from 'qrcode';
-import { randomBytes } from 'crypto';
-import { promisify } from 'util';
+import { randomBytes } from 'node:crypto';
 import { Redis } from 'ioredis';
 import { PrismaClient } from '@prisma/client';
-import { UserRepository } from '../repositories/UserRepository';
-import { 
-  UUID, 
-  JWT, 
-  UserRole, 
-  AuthStatus, 
-  TokenType, 
+import { UserRepository } from '../repositories/UserRepository.js';
+import { GameError as AppError } from '../errors/GameError.js';
+import {
+  AuthError,
+  InvalidCredentialsError,
+  AccountLockedError,
+  TokenExpiredError
+} from '../errors/AuthErrors.js';
+import {
+  UUID,
+  JWT,
+  UserRole,
+  AuthStatus,
+  TokenType,
   TIME_CONSTRAINTS,
   ErrorCode,
-  TEXT_CONSTRAINTS 
-} from '../types';
-
-// Interfaces
-export interface IAuthUser {
-  id: UUID;
-  email: string;
-  username: string;
-  role: UserRole;
-  status: AuthStatus;
-  mfaEnabled: boolean;
-  mfaSecret?: string;
-  lastLoginAt?: Date;
-  loginAttempts: number;
-  lockedUntil?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
+  TEXT_CONSTRAINTS,
+  IAuthUser
+} from '../types/index.js';
 
 export interface ITokenPayload {
   userId: UUID;
@@ -69,68 +60,55 @@ export interface ILoginAttempt {
   lockedUntil?: Date;
 }
 
-// Clases de error personalizadas
-export class AuthError extends Error {
-  constructor(
-    message: string,
-    public code: ErrorCode,
-    public statusCode: number = 401
-  ) {
-    super(message);
-    this.name = 'AuthError';
-  }
+export interface IMfaSetup {
+  secret: string;
+  qrCode: string;
+  backupCodes: Array<string>;
 }
 
-export class InvalidCredentialsError extends AuthError {
-  constructor(message: string = 'Invalid credentials') {
-    super(message, ErrorCode.INVALID_CREDENTIALS);
-  }
+export interface ILoginResult {
+  user: IAuthUser;
+  accessToken: JWT;
+  refreshToken: JWT;
+  requiresMFA: boolean;
 }
 
-export class AccountLockedError extends AuthError {
-  constructor(lockedUntil: Date) {
-    super(
-      `Account locked until ${lockedUntil.toISOString()}`,
-      ErrorCode.ACCOUNT_SUSPENDED,
-      423
-    );
-  }
+export interface ISessionData {
+  userId: UUID;
+  deviceId: string;
+  createdAt: string;
 }
 
-export class MFARequiredError extends AuthError {
-  constructor(message: string = 'Multi-factor authentication required') {
-    super(message, ErrorCode.MFA_REQUIRED, 403);
-  }
-}
-
-export class TokenExpiredError extends AuthError {
-  constructor(message: string = 'Token has expired') {
-    super(message, ErrorCode.TOKEN_EXPIRED);
-  }
+export interface ITemporaryMfaData {
+  secret: string;
+  backupCodes: Array<string>;
 }
 
 // Servicio de autenticación
 export class AuthenticationService {
-  private config: IAuthConfig;
-  private redis: Redis;
-  private userRepository: UserRepository;
+  private readonly config: IAuthConfig;
 
-  constructor(config: IAuthConfig, prisma: PrismaClient) {
+  private readonly redis: Redis;
+
+  public userRepository: UserRepository;
+
+  public constructor(config: IAuthConfig, prisma: PrismaClient) {
     this.config = config;
     this.redis = config.redis;
     this.userRepository = new UserRepository(prisma);
-    
+
     // Configurar otplib
     authenticator.options = {
       step: 30,
       window: 1,
       digits: 6,
+      // @ts-expect-error - algorithm type mismatch in library definitions
       algorithm: 'sha1'
     };
   }
 
   // Métodos de autenticación
-  async register(email: string, username: string, password: string): Promise<IAuthUser> {
+  public async register(email: string, username: string, password: string): Promise<IAuthUser> {
     // Validar entrada
     this.validateEmail(email);
     this.validateUsername(username);
@@ -166,32 +144,19 @@ export class AuthenticationService {
     return user;
   }
 
-  async login(email: string, password: string, mfaToken?: string, deviceId?: string): Promise<{
-    user: IAuthUser;
-    accessToken: JWT;
-    refreshToken: JWT;
-    requiresMFA: boolean;
-  }> {
+  public async login(email: string, password: string, mfaToken?: string, deviceId?: string): Promise<ILoginResult> {
     const user = await this.userRepository.findByEmail(email.toLowerCase());
-    
+
     if (!user) {
       throw new InvalidCredentialsError();
     }
 
-    // Verificar si la cuenta está bloqueada
-    if (user.lockedUntil && user.lockedUntil > new Date()) {
-      throw new AccountLockedError(user.lockedUntil);
-    }
-
-    // Verificar estado de la cuenta
-    if (user.status !== AuthStatus.ACTIVE) {
-      throw new AuthError('Account is not active', ErrorCode.ACCOUNT_SUSPENDED);
-    }
+    this.checkAccountStatus(user);
 
     // Verificar contraseña
     const passwordHash = await this.userRepository.getPasswordHash(user.id);
     const isPasswordValid = await bcrypt.compare(password, passwordHash || '');
-    
+
     if (!isPasswordValid) {
       await this.recordFailedLogin(user);
       throw new InvalidCredentialsError();
@@ -218,10 +183,26 @@ export class AuthenticationService {
     // Resetear intentos de login fallidos
     await this.resetLoginAttempts(user);
 
+    return this.createSession(user, deviceId);
+  }
+
+  private checkAccountStatus(user: IAuthUser): void {
+    // Verificar si la cuenta está bloqueada
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      throw new AccountLockedError(user.lockedUntil);
+    }
+
+    // Verificar estado de la cuenta
+    if (user.status !== AuthStatus.ACTIVE) {
+      throw new AuthError('Account is not active', ErrorCode.ACCOUNT_SUSPENDED);
+    }
+  }
+
+  private async createSession(user: IAuthUser, deviceId?: string): Promise<ILoginResult> {
     // Generar tokens
     const sessionId = this.generateUUID();
     const deviceIdentifier = deviceId || this.generateDeviceId();
-    
+
     const accessToken = await this.generateAccessToken(user, sessionId, deviceIdentifier);
     const refreshToken = await this.generateRefreshToken(user, sessionId, deviceIdentifier);
 
@@ -239,21 +220,18 @@ export class AuthenticationService {
     };
   }
 
-  async logout(userId: UUID, sessionId: string): Promise<void> {
+  public async logout(_userId: UUID, sessionId: string): Promise<void> {
     // Invalidar tokens
     await this.invalidateSession(sessionId);
-    
-    // Opcional: invalidar todos los tokens del usuario
-    // await this.invalidateAllUserSessions(userId);
   }
 
-  async refreshToken(refreshToken: JWT): Promise<{ 
-    accessToken: JWT; 
+  public async refreshToken(refreshToken: JWT): Promise<{
+    accessToken: JWT;
     refreshToken: JWT;
   }> {
     try {
       const payload = jwt.verify(refreshToken, this.config.jwtRefreshSecret) as IRefreshTokenPayload;
-      
+
       // Verificar que la sesión aún sea válida
       const session = await this.getSession(payload.sessionId);
       if (!session || session.userId !== payload.userId) {
@@ -283,11 +261,7 @@ export class AuthenticationService {
   }
 
   // Métodos MFA
-  async setupMFA(userId: UUID): Promise<{
-    secret: string;
-    qrCode: string;
-    backupCodes: string[];
-  }> {
+  public async setupMFA(userId: UUID): Promise<IMfaSetup> {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new AuthError('User not found', ErrorCode.RESOURCE_NOT_FOUND);
@@ -295,11 +269,11 @@ export class AuthenticationService {
 
     // Generar secreto MFA
     const secret = authenticator.generateSecret();
-    
+
     // Generar QR code
     const otpauth = authenticator.keyuri(user.email, this.config.mfaIssuer, secret);
     const qrCode = await qrcode.toDataURL(otpauth);
-    
+
     // Generar códigos de respaldo
     const backupCodes = this.generateBackupCodes();
 
@@ -313,30 +287,30 @@ export class AuthenticationService {
     };
   }
 
-  async enableMFA(userId: UUID, token: string): Promise<void> {
+  public async enableMFA(userId: UUID, token: string): Promise<void> {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new AuthError('User not found', ErrorCode.RESOURCE_NOT_FOUND);
     }
 
     // Obtener secreto temporal
-    const tempData = await this.getTemporaryMFASecret(userId);
-    if (!tempData) {
+    const temporaryData = await this.getTemporaryMFASecret(userId);
+    if (!temporaryData) {
       throw new AuthError('No MFA setup in progress', ErrorCode.OPERATION_NOT_ALLOWED);
     }
 
     // Verificar token
-    const isValid = await this.verifyMFAToken(tempData.secret, token);
+    const isValid = await this.verifyMFAToken(temporaryData.secret, token);
     if (!isValid) {
       throw new AuthError('Invalid MFA token', ErrorCode.INVALID_CREDENTIALS);
     }
 
     // Habilitar MFA
-    await this.userRepository.enableMFA(userId, tempData.secret, tempData.backupCodes);
+    await this.userRepository.enableMFA(userId, temporaryData.secret, temporaryData.backupCodes);
     await this.clearTemporaryMFASecret(userId);
   }
 
-  async disableMFA(userId: UUID, password: string): Promise<void> {
+  public async disableMFA(userId: UUID, password: string): Promise<void> {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new AuthError('User not found', ErrorCode.RESOURCE_NOT_FOUND);
@@ -357,16 +331,16 @@ export class AuthenticationService {
     await this.userRepository.disableMFA(userId);
   }
 
-  async verifyMFAToken(secret: string, token: string): Promise<boolean> {
+  public async verifyMFAToken(secret: string, token: string): Promise<boolean> {
     try {
       return authenticator.verify({ token, secret });
-    } catch (error) {
+    } catch {
       return false;
     }
   }
 
   // Métodos de token
-  async generateAccessToken(user: IAuthUser, sessionId: string, deviceId: string): Promise<JWT> {
+  public async generateAccessToken(user: IAuthUser, sessionId: string, deviceId: string): Promise<JWT> {
     const payload: ITokenPayload = {
       userId: user.id,
       email: user.email,
@@ -378,10 +352,10 @@ export class AuthenticationService {
       exp: Math.floor(Date.now() / 1000) + (TIME_CONSTRAINTS.ACCESS_TOKEN_TTL / 1000)
     };
 
-    return jwt.sign(payload, this.config.jwtSecret) as JWT;
+    return jwt.sign(payload, this.config.jwtSecret);
   }
 
-  async generateRefreshToken(user: IAuthUser, sessionId: string, deviceId: string): Promise<JWT> {
+  public async generateRefreshToken(user: IAuthUser, sessionId: string, deviceId: string): Promise<JWT> {
     const payload: IRefreshTokenPayload = {
       userId: user.id,
       sessionId,
@@ -390,20 +364,20 @@ export class AuthenticationService {
       exp: Math.floor(Date.now() / 1000) + (TIME_CONSTRAINTS.REFRESH_TOKEN_TTL / 1000)
     };
 
-    return jwt.sign(payload, this.config.jwtRefreshSecret) as JWT;
+    return jwt.sign(payload, this.config.jwtRefreshSecret);
   }
 
-  async generateToken(payload: any, ttl: number): Promise<JWT> {
+  public async generateToken(payload: Record<string, unknown>, ttl: number): Promise<JWT> {
     const tokenPayload = {
       ...payload,
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + (ttl / 1000)
     };
 
-    return jwt.sign(tokenPayload, this.config.jwtSecret) as JWT;
+    return jwt.sign(tokenPayload, this.config.jwtSecret);
   }
 
-  async verifyToken(token: JWT): Promise<ITokenPayload> {
+  public async verifyToken(token: JWT): Promise<ITokenPayload> {
     try {
       return jwt.verify(token, this.config.jwtSecret) as ITokenPayload;
     } catch (error) {
@@ -416,7 +390,7 @@ export class AuthenticationService {
 
   // Métodos de validación
   private validateEmail(email: string): void {
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    const emailRegex = /^[\w%+.-]+@[\d.A-Za-z-]+\.[A-Za-z]{2,}$/;
     if (!emailRegex.test(email)) {
       throw new AuthError('Invalid email format', ErrorCode.INVALID_INPUT);
     }
@@ -426,7 +400,7 @@ export class AuthenticationService {
   }
 
   private validateUsername(username: string): void {
-    const usernameRegex = /^[a-zA-Z0-9_-]{3,30}$/;
+    const usernameRegex = /^[\w-]{3,30}$/;
     if (!usernameRegex.test(username)) {
       throw new AuthError('Invalid username format', ErrorCode.INVALID_INPUT);
     }
@@ -444,7 +418,7 @@ export class AuthenticationService {
     const hasLowerCase = /[a-z]/.test(password);
     const hasUpperCase = /[A-Z]/.test(password);
     const hasNumbers = /\d/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    const hasSpecialChar = /[!"#$%&()*,.:<>?@^{|}]/.test(password);
 
     if (!hasLowerCase || !hasUpperCase || !hasNumbers || !hasSpecialChar) {
       throw new AuthError(
@@ -456,16 +430,16 @@ export class AuthenticationService {
 
   // Métodos auxiliares
   private generateUUID(): UUID {
-    return randomBytes(16).toString('hex') as UUID;
+    return randomBytes(16).toString('hex');
   }
 
   private generateDeviceId(): string {
     return randomBytes(32).toString('hex');
   }
 
-  private generateBackupCodes(): string[] {
-    const codes: string[] = [];
-    for (let i = 0; i < 10; i++) {
+  private generateBackupCodes(): Array<string> {
+    const codes: Array<string> = [];
+    for (let index = 0; index < 10; index++) {
       codes.push(randomBytes(4).toString('hex').toUpperCase());
     }
     return codes;
@@ -473,11 +447,11 @@ export class AuthenticationService {
 
   private async recordFailedLogin(user: IAuthUser): Promise<void> {
     user.loginAttempts++;
-    
+
     if (user.loginAttempts >= this.config.maxLoginAttempts) {
       user.lockedUntil = new Date(Date.now() + this.config.lockoutDuration);
     }
-    
+
     await this.userRepository.update(user.id, user);
   }
 
@@ -489,12 +463,12 @@ export class AuthenticationService {
 
   // Métodos Redis
   private async saveSession(sessionId: string, userId: UUID, deviceId: string): Promise<void> {
-    const sessionData = {
+    const sessionData: ISessionData = {
       userId,
       deviceId,
       createdAt: new Date().toISOString()
     };
-    
+
     await this.redis.setex(
       `session:${sessionId}`,
       Math.floor(TIME_CONSTRAINTS.REFRESH_TOKEN_TTL / 1000),
@@ -502,9 +476,9 @@ export class AuthenticationService {
     );
   }
 
-  private async getSession(sessionId: string): Promise<any> {
+  private async getSession(sessionId: string): Promise<ISessionData | null> {
     const sessionData = await this.redis.get(`session:${sessionId}`);
-    return sessionData ? JSON.parse(sessionData) : null;
+    return sessionData ? JSON.parse(sessionData) as ISessionData : null;
   }
 
   private async invalidateSession(sessionId: string): Promise<void> {
@@ -516,7 +490,7 @@ export class AuthenticationService {
     );
   }
 
-  private async saveTemporaryMFASecret(userId: UUID, secret: string, backupCodes: string[]): Promise<void> {
+  private async saveTemporaryMFASecret(userId: UUID, secret: string, backupCodes: Array<string>): Promise<void> {
     await this.redis.setex(
       `mfa_setup:${userId}`,
       600, // 10 minutos
@@ -524,9 +498,9 @@ export class AuthenticationService {
     );
   }
 
-  private async getTemporaryMFASecret(userId: UUID): Promise<any> {
+  private async getTemporaryMFASecret(userId: UUID): Promise<ITemporaryMfaData | null> {
     const data = await this.redis.get(`mfa_setup:${userId}`);
-    return data ? JSON.parse(data) : null;
+    return data ? JSON.parse(data) as ITemporaryMfaData : null;
   }
 
   private async clearTemporaryMFASecret(userId: UUID): Promise<void> {
@@ -534,46 +508,28 @@ export class AuthenticationService {
   }
 
   // Métodos de email (implementar con servicio de email)
-  private async sendVerificationEmail(email: string, token: JWT): Promise<void> {
+  private async sendVerificationEmail(_email: string, _token: JWT): Promise<void> {
     // Implementar con servicio de email (SendGrid, AWS SES, etc.)
+    // console.log(`[MOCK] Sending verification email to ${email} with token ${token}`);
   }
 
   // Métodos auxiliares que faltaban implementar
-  async findUserById(userId: UUID): Promise<IAuthUser | null> {
+  public async findUserById(userId: UUID): Promise<IAuthUser | null> {
     try {
       const user = await this.userRepository.findById(userId);
       return user;
-    } catch (error) {
-      this.logger.error('Error finding user by ID:', { userId, error });
+    } catch {
+      // console.error('Error finding user by ID:', { userId, error });
       return null;
     }
   }
 
-  async updateUserRole(userId: UUID, newRole: UserRole): Promise<void> {
+  public async updateUserRole(userId: UUID, newRole: UserRole): Promise<void> {
     try {
       await this.userRepository.updateRole(userId, newRole);
     } catch (error) {
-      this.logger.error('Error updating user role:', { userId, newRole, error });
+      // console.error('Error updating user role:', { userId, newRole, error });
       throw new AppError('Failed to update user role', ErrorCode.INTERNAL_SERVER_ERROR, 500);
-    }
-  }
-
-  private async updateLastLogin(userId: UUID): Promise<void> {
-    try {
-      await this.userRepository.updateLastLogin(userId);
-    } catch (error) {
-      this.logger.error('Error updating last login:', { userId, error });
-      // No lanzamos error para no interrumpir el flujo de login
-    }
-  }
-
-  private async getPasswordHash(userId: UUID): Promise<string | null> {
-    try {
-      const hash = await this.userRepository.getPasswordHash(userId);
-      return hash;
-    } catch (error) {
-      this.logger.error('Error getting password hash:', { userId, error });
-      return null;
     }
   }
 }

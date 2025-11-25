@@ -1,33 +1,44 @@
-import { EventEmitter } from 'events';
-import { IChatMessage, IChatRoom, RoomType, MessageType } from '../interfaces/IChat';
-import { IWebSocketManager } from '../../websocket/interfaces/IWebSocketManager';
-import { IRedisClient } from '../../cache/interfaces/IRedisClient';
-import { GameError, ErrorCode } from '../../errors/GameError';
-import { ILogger } from '../../logging/interfaces/ILogger';
+import { EventEmitter } from 'node:events';
+import { IChatMessage, IChatRoom, RoomType, MessageType } from '../interfaces/IChat.js';
+import { IWebSocketManager } from '../../websocket/interfaces/IWebSocketManager.js';
+import { IRedisClient } from '../../cache/interfaces/IRedisClient.js';
+import { GameError, ErrorCode } from '../../errors/GameError.js';
+import { ILogger } from '../../logging/interfaces/ILogger.js';
 
 export interface IChatService {
   createRoom(roomData: Partial<IChatRoom>): Promise<IChatRoom>;
   joinRoom(roomId: string, userId: string): Promise<void>;
   leaveRoom(roomId: string, userId: string): Promise<void>;
   sendMessage(roomId: string, userId: string, content: string, messageType?: MessageType): Promise<IChatMessage>;
-  getRoomMessages(roomId: string, limit?: number, before?: Date): Promise<IChatMessage[]>;
-  getUserRooms(userId: string): Promise<IChatRoom[]>;
+  getRoomMessages(roomId: string, limit?: number, before?: Date): Promise<Array<IChatMessage>>;
+  getUserRooms(userId: string): Promise<Array<IChatRoom>>;
   deleteMessage(roomId: string, messageId: string, userId: string): Promise<void>;
   moderateMessage(roomId: string, messageId: string, moderatorId: string, action: 'delete' | 'warn' | 'ban'): Promise<void>;
 }
 
+export interface IChatEvent {
+  type: string;
+  data: Record<string, unknown>;
+}
+
 export class ChatService extends EventEmitter implements IChatService {
   private readonly ROOM_KEY = 'chat:room:';
+
   private readonly ROOM_MEMBERS_KEY = 'chat:room:members:';
+
   private readonly ROOM_MESSAGES_KEY = 'chat:room:messages:';
+
   private readonly USER_ROOMS_KEY = 'chat:user:rooms:';
+
   private readonly MESSAGE_MODERATION_KEY = 'chat:moderation:';
-  
+
   private readonly MAX_MESSAGES_PER_ROOM = 1000;
+
   private readonly MAX_MESSAGE_LENGTH = 1000;
+
   private readonly RATE_LIMIT_MESSAGES_PER_MINUTE = 30;
 
-  constructor(
+  public constructor(
     private readonly websocketManager: IWebSocketManager,
     private readonly redis: IRedisClient,
     private readonly logger: ILogger
@@ -35,7 +46,7 @@ export class ChatService extends EventEmitter implements IChatService {
     super();
   }
 
-  async createRoom(roomData: Partial<IChatRoom>): Promise<IChatRoom> {
+  public async createRoom(roomData: Partial<IChatRoom>): Promise<IChatRoom> {
     try {
       const roomId = this.generateRoomId();
       const room: IChatRoom = {
@@ -49,7 +60,7 @@ export class ChatService extends EventEmitter implements IChatService {
         members: [],
         memberCount: 0,
         isPrivate: roomData.isPrivate || false,
-        password: roomData.password,
+        ...(roomData.password ? { password: roomData.password } : {}),
         lastActivity: new Date(),
         metadata: roomData.metadata || {},
         createdAt: new Date(),
@@ -61,13 +72,13 @@ export class ChatService extends EventEmitter implements IChatService {
 
       // Save room
       const roomKey = `${this.ROOM_KEY}${roomId}`;
-      await this.redis.setex(roomKey, 86400, JSON.stringify(room)); // 24 hour TTL
+      await this.redis.setex(roomKey, 86_400, JSON.stringify(room)); // 24 hour TTL
 
       // Creator automatically joins the room
-      await this.joinRoom(roomId, room.creatorId);
+      await this.joinRoom(roomId, room.ownerId);
 
-      this.logger.info('Chat room created', { roomId, creatorId: room.creatorId });
-      
+      this.logger.info('Chat room created', { roomId, creatorId: room.ownerId });
+
       return room;
     } catch (error) {
       this.logger.error('Error creating chat room', { roomData, error });
@@ -79,7 +90,7 @@ export class ChatService extends EventEmitter implements IChatService {
     }
   }
 
-  async joinRoom(roomId: string, userId: string): Promise<void> {
+  public async joinRoom(roomId: string, userId: string): Promise<void> {
     try {
       // Check if room exists
       const room = await this.getRoom(roomId);
@@ -141,7 +152,7 @@ export class ChatService extends EventEmitter implements IChatService {
     }
   }
 
-  async leaveRoom(roomId: string, userId: string): Promise<void> {
+  public async leaveRoom(roomId: string, userId: string): Promise<void> {
     try {
       // Check if user is in room
       const isMember = await this.isRoomMember(roomId, userId);
@@ -187,7 +198,7 @@ export class ChatService extends EventEmitter implements IChatService {
     }
   }
 
-  async sendMessage(roomId: string, userId: string, content: string, messageType: MessageType = MessageType.TEXT): Promise<IChatMessage> {
+  public async sendMessage(roomId: string, userId: string, content: string, messageType: MessageType = MessageType.TEXT): Promise<IChatMessage> {
     try {
       // Validate message
       this.validateMessage(content, messageType);
@@ -210,7 +221,7 @@ export class ChatService extends EventEmitter implements IChatService {
         id: this.generateMessageId(),
         roomId,
         userId,
-        username: `User_${userId.substring(0, 8)}`, // Temporary username
+        username: `User_${userId.slice(0, 8)}`, // Temporary username
         content: this.sanitizeContent(content),
         type: messageType,
         timestamp: new Date(),
@@ -221,7 +232,7 @@ export class ChatService extends EventEmitter implements IChatService {
       };
 
       // Check for moderation
-      const moderationResult = await this.moderateMessage(message);
+      const moderationResult = await this.checkMessageContent(message);
       if (moderationResult.action === 'block') {
         throw new GameError(
           'Message blocked by moderation',
@@ -240,7 +251,7 @@ export class ChatService extends EventEmitter implements IChatService {
       await this.updateRoomActivity(roomId);
 
       this.logger.debug('Chat message sent', { roomId, userId, messageId: message.id });
-      
+
       return message;
     } catch (error) {
       if (error instanceof GameError) {
@@ -255,18 +266,18 @@ export class ChatService extends EventEmitter implements IChatService {
     }
   }
 
-  async getRoomMessages(roomId: string, limit: number = 50, before?: Date): Promise<IChatMessage[]> {
+  public async getRoomMessages(roomId: string, limit: number = 50, before?: Date): Promise<Array<IChatMessage>> {
     try {
       const messagesKey = `${this.ROOM_MESSAGES_KEY}${roomId}`;
-      
+
       // Get messages from Redis
-      let messages = await this.redis.lrange(messagesKey, 0, limit - 1);
-      
+      const messages = await this.redis.lrange(messagesKey, 0, limit - 1);
+
       // Parse and filter messages
-      const parsedMessages: IChatMessage[] = messages
-        .map(msg => JSON.parse(msg) as IChatMessage)
-        .filter(msg => !msg.deleted) // Filter out deleted messages
-        .filter(msg => !before || new Date(msg.timestamp) < before) // Filter by timestamp if specified
+      const parsedMessages: Array<IChatMessage> = messages
+        .map(message => JSON.parse(message) as IChatMessage)
+        .filter(message => !message.deleted) // Filter out deleted messages
+        .filter(message => !before || new Date(message.timestamp) < before) // Filter by timestamp if specified
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()); // Sort by timestamp
 
       return parsedMessages;
@@ -280,13 +291,13 @@ export class ChatService extends EventEmitter implements IChatService {
     }
   }
 
-  async getUserRooms(userId: string): Promise<IChatRoom[]> {
+  public async getUserRooms(userId: string): Promise<Array<IChatRoom>> {
     try {
       const userRoomsKey = `${this.USER_ROOMS_KEY}${userId}`;
       const roomIds = await this.redis.smembers(userRoomsKey);
-      
-      const rooms: IChatRoom[] = [];
-      
+
+      const rooms: Array<IChatRoom> = [];
+
       for (const roomId of roomIds) {
         const room = await this.getRoom(roomId);
         if (room) {
@@ -295,7 +306,7 @@ export class ChatService extends EventEmitter implements IChatService {
       }
 
       // Sort by last activity
-      rooms.sort((a, b) => 
+      rooms.sort((a, b) =>
         new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()
       );
 
@@ -310,7 +321,7 @@ export class ChatService extends EventEmitter implements IChatService {
     }
   }
 
-  async deleteMessage(roomId: string, messageId: string, userId: string): Promise<void> {
+  public async deleteMessage(roomId: string, messageId: string, userId: string): Promise<void> {
     try {
       // Get message
       const message = await this.getMessage(roomId, messageId);
@@ -334,8 +345,9 @@ export class ChatService extends EventEmitter implements IChatService {
       // Mark as deleted
       message.deleted = true;
       message.content = '[Message deleted]';
-      message.metadata.deletedAt = new Date();
-      message.metadata.deletedBy = userId;
+      if (!message.metadata) message.metadata = {};
+      message.metadata['deletedAt'] = new Date();
+      message.metadata['deletedBy'] = userId;
 
       // Update message
       await this.updateMessage(message);
@@ -360,7 +372,7 @@ export class ChatService extends EventEmitter implements IChatService {
     }
   }
 
-  async moderateMessage(roomId: string, messageId: string, moderatorId: string, action: 'delete' | 'warn' | 'ban'): Promise<void> {
+  public async moderateMessage(roomId: string, messageId: string, moderatorId: string, action: 'delete' | 'warn' | 'ban'): Promise<void> {
     try {
       const message = await this.getMessage(roomId, messageId);
       if (!message) {
@@ -373,7 +385,7 @@ export class ChatService extends EventEmitter implements IChatService {
 
       // Log moderation action
       const moderationKey = `${this.MESSAGE_MODERATION_KEY}${messageId}`;
-      await this.redis.setex(moderationKey, 86400, JSON.stringify({
+      await this.redis.setex(moderationKey, 86_400, JSON.stringify({
         messageId,
         roomId,
         moderatorId,
@@ -383,24 +395,28 @@ export class ChatService extends EventEmitter implements IChatService {
       }));
 
       switch (action) {
-        case 'delete':
+        case 'delete': {
           message.deleted = true;
           message.content = '[Message removed by moderator]';
-          message.metadata.moderated = true;
-          message.metadata.moderatedBy = moderatorId;
-          message.metadata.moderatedAt = new Date();
+          if (!message.metadata) message.metadata = {};
+          message.metadata['moderated'] = true;
+          message.metadata['moderatedBy'] = moderatorId;
+          message.metadata['moderatedAt'] = new Date();
           await this.updateMessage(message);
           break;
+        }
 
-        case 'warn':
+        case 'warn': {
           // Send warning to user
           await this.sendModerationWarning(message.userId, moderatorId, 'Inappropriate message');
           break;
+        }
 
-        case 'ban':
+        case 'ban': {
           // Ban user from room
           await this.banUserFromRoom(roomId, message.userId, moderatorId);
           break;
+        }
       }
 
       this.logger.info('Message moderated', { roomId, messageId, moderatorId, action });
@@ -419,11 +435,11 @@ export class ChatService extends EventEmitter implements IChatService {
 
   // Helper methods
   private generateRoomId(): string {
-    return `room_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `room_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   }
 
   private generateMessageId(): string {
-    return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   }
 
   private validateRoomData(room: IChatRoom): void {
@@ -463,15 +479,18 @@ export class ChatService extends EventEmitter implements IChatService {
 
     // Add more validation based on message type
     switch (messageType) {
-      case MessageType.TEXT:
+      case MessageType.TEXT: {
         // Basic text validation
         break;
-      case MessageType.EMOTE:
+      }
+      case MessageType.EMOTE: {
         // Validate emote format
         break;
-      default:
+      }
+      default: {
         // Default validation for other types
         break;
+      }
     }
   }
 
@@ -483,11 +502,11 @@ export class ChatService extends EventEmitter implements IChatService {
   private async checkRateLimit(userId: string): Promise<void> {
     const rateLimitKey = `chat:ratelimit:${userId}`;
     const current = await this.redis.incr(rateLimitKey);
-    
+
     if (current === 1) {
       await this.redis.expire(rateLimitKey, 60); // 1 minute window
     }
-    
+
     if (current > this.RATE_LIMIT_MESSAGES_PER_MINUTE) {
       throw new GameError(
         'Rate limit exceeded. Please slow down.',
@@ -497,17 +516,17 @@ export class ChatService extends EventEmitter implements IChatService {
     }
   }
 
-  private async moderateMessage(message: IChatMessage): Promise<{ action: 'allow' | 'block' | 'flag' }> {
+  private async checkMessageContent(message: IChatMessage): Promise<{ action: 'allow' | 'block' | 'flag' }> {
     // Simple moderation logic - in production, integrate with ML moderation service
     const blockedWords = ['spam', 'scam', 'hack', 'cheat'];
     const contentLower = message.content.toLowerCase();
-    
+
     for (const word of blockedWords) {
       if (contentLower.includes(word)) {
         return { action: 'block' };
       }
     }
-    
+
     return { action: 'allow' };
   }
 
@@ -517,7 +536,7 @@ export class ChatService extends EventEmitter implements IChatService {
   }
 
   private async updateRoom(room: IChatRoom): Promise<void> {
-    await this.redis.setex(`${this.ROOM_KEY}${room.id}`, 86400, JSON.stringify(room));
+    await this.redis.setex(`${this.ROOM_KEY}${room.id}`, 86_400, JSON.stringify(room));
   }
 
   private async updateRoomActivity(roomId: string): Promise<void> {
@@ -536,7 +555,7 @@ export class ChatService extends EventEmitter implements IChatService {
   private async addRoomMember(roomId: string, userId: string): Promise<void> {
     const membersKey = `${this.ROOM_MEMBERS_KEY}${roomId}`;
     await this.redis.sadd(membersKey, userId);
-    await this.redis.expire(membersKey, 86400); // 24 hour TTL
+    await this.redis.expire(membersKey, 86_400); // 24 hour TTL
   }
 
   private async removeRoomMember(roomId: string, userId: string): Promise<void> {
@@ -547,7 +566,7 @@ export class ChatService extends EventEmitter implements IChatService {
   private async addUserRoom(userId: string, roomId: string): Promise<void> {
     const userRoomsKey = `${this.USER_ROOMS_KEY}${userId}`;
     await this.redis.sadd(userRoomsKey, roomId);
-    await this.redis.expire(userRoomsKey, 86400); // 24 hour TTL
+    await this.redis.expire(userRoomsKey, 86_400); // 24 hour TTL
   }
 
   private async removeUserRoom(userId: string, roomId: string): Promise<void> {
@@ -557,40 +576,41 @@ export class ChatService extends EventEmitter implements IChatService {
 
   private async saveMessage(message: IChatMessage): Promise<void> {
     const messagesKey = `${this.ROOM_MESSAGES_KEY}${message.roomId}`;
-    
+
     // Add to list
     await this.redis.lpush(messagesKey, JSON.stringify(message));
-    
+
     // Trim to max messages
     await this.redis.ltrim(messagesKey, 0, this.MAX_MESSAGES_PER_ROOM - 1);
-    
+
     // Set TTL
-    await this.redis.expire(messagesKey, 86400); // 24 hour TTL
+    await this.redis.expire(messagesKey, 86_400); // 24 hour TTL
   }
 
   private async getMessage(roomId: string, messageId: string): Promise<IChatMessage | null> {
     const messagesKey = `${this.ROOM_MESSAGES_KEY}${roomId}`;
     const messages = await this.redis.lrange(messagesKey, 0, -1);
-    
-    for (const msg of messages) {
-      const message = JSON.parse(msg) as IChatMessage;
+
+    for (const message_ of messages) {
+      const message = JSON.parse(message_) as IChatMessage;
       if (message.id === messageId) {
         return message;
       }
     }
-    
+
     return null;
   }
 
   private async updateMessage(message: IChatMessage): Promise<void> {
     const messagesKey = `${this.ROOM_MESSAGES_KEY}${message.roomId}`;
     const messages = await this.redis.lrange(messagesKey, 0, -1);
-    
+
     // Find and update the message
-    for (let i = 0; i < messages.length; i++) {
-      const msg = JSON.parse(messages[i]) as IChatMessage;
-      if (msg.id === message.id) {
-        await this.redis.lset(messagesKey, i, JSON.stringify(message));
+    for (const [index, rawMessage] of messages.entries()) {
+      if (!rawMessage) continue;
+      const message_ = JSON.parse(rawMessage) as IChatMessage;
+      if (message_.id === message.id) {
+        await this.redis.lset(messagesKey, index, JSON.stringify(message));
         break;
       }
     }
@@ -609,14 +629,14 @@ export class ChatService extends EventEmitter implements IChatService {
     await this.broadcastRoomEvent(roomId, event);
   }
 
-  private async broadcastRoomEvent(roomId: string, event: any): Promise<void> {
+  private async broadcastRoomEvent(roomId: string, event: IChatEvent): Promise<void> {
     // Get room members
     const membersKey = `${this.ROOM_MEMBERS_KEY}${roomId}`;
     const members = await this.redis.smembers(membersKey);
-    
+
     // Send to all members
     for (const userId of members) {
-      await this.websocketManager.sendToUser(userId, event);
+      await this.websocketManager.sendToUser(userId, event.type, event.data);
     }
   }
 
@@ -631,7 +651,7 @@ export class ChatService extends EventEmitter implements IChatService {
       }
     };
 
-    await this.websocketManager.sendToUser(userId, warning);
+    await this.websocketManager.sendToUser(userId, warning.type, warning.data);
   }
 
   private async banUserFromRoom(roomId: string, userId: string, moderatorId: string): Promise<void> {
@@ -642,16 +662,13 @@ export class ChatService extends EventEmitter implements IChatService {
     // Add to ban list
     const banKey = `chat:room:banned:${roomId}`;
     await this.redis.sadd(banKey, userId);
-    await this.redis.expire(banKey, 86400); // 24 hour ban
+    await this.redis.expire(banKey, 86_400); // 24 hour ban
 
     // Send ban notification
-    await this.websocketManager.sendToUser(userId, {
-      type: 'room_banned',
-      data: {
-        roomId,
-        moderatorId,
-        timestamp: new Date()
-      }
+    await this.websocketManager.sendToUser(userId, 'room_banned', {
+      roomId,
+      moderatorId,
+      timestamp: new Date()
     });
   }
 }

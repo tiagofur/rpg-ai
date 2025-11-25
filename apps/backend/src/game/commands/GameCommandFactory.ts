@@ -1,30 +1,36 @@
-import { IGameCommand, CommandType } from '../interfaces/IGameCommand';
-import { AttackCommand } from './AttackCommand';
-import { MoveCommand } from './MoveCommand';
-import { UseItemCommand } from './UseItemCommand';
-import { CastSpellCommand } from './CastSpellCommand';
-import { DefendCommand } from './DefendCommand';
-import { InteractCommand } from './InteractCommand';
-import { GenerateNarrativeCommand } from './GenerateNarrativeCommand';
-import { GameError, ErrorCode } from '../../errors/GameError';
-import { IAIService } from '../../ai/interfaces/IAIService';
+import { IGameCommand, CommandType } from '../interfaces.js';
+import { AttackCommand } from './AttackCommand.js';
+import { MoveCommand } from './MoveCommand.js';
+import { UseItemCommand } from './UseItemCommand.js';
+import { CastSpellCommand } from './CastSpellCommand.js';
+import { DefendCommand } from './DefendCommand.js';
+import { InteractCommand } from './InteractCommand.js';
+import { LootCommand } from './LootCommand.js';
+import { GenerateNarrativeCommand } from './GenerateNarrativeCommand.js';
+import { GenerateImageCommand } from './GenerateImageCommand.js';
+import { ProcessInputCommand } from './ProcessInputCommand.js';
+import { RespawnCommand } from './RespawnCommand.js';
+import { GameError, ErrorCode } from '../../errors/GameError.js';
+import { IAIService } from '../../ai/interfaces/IAIService.js';
+import { IAnalyticsService } from '../../interfaces/IAnalytics.js';
 
 export interface ICommandFactory {
   createCommand(type: CommandType): IGameCommand;
-  getAvailableCommands(): CommandType[];
+  getAvailableCommands(): Array<CommandType>;
   isValidCommand(type: string): type is CommandType;
 }
 
 export class GameCommandFactory implements ICommandFactory {
   private readonly commands = new Map<CommandType, () => IGameCommand>();
-  private readonly aiService?: IAIService;
 
-  constructor(aiService?: IAIService) {
-    this.aiService = aiService;
-    this.registerCommands();
+  constructor(
+    private readonly aiService?: IAIService,
+    private readonly analyticsService?: IAnalyticsService
+  ) {
+    this.initializeCommands();
   }
 
-  private registerCommands(): void {
+  private initializeCommands(): void {
     // Comandos básicos que no requieren dependencias
     this.commands.set(CommandType.ATTACK, () => new AttackCommand());
     this.commands.set(CommandType.MOVE, () => new MoveCommand());
@@ -32,10 +38,15 @@ export class GameCommandFactory implements ICommandFactory {
     this.commands.set(CommandType.CAST_SPELL, () => new CastSpellCommand());
     this.commands.set(CommandType.DEFEND, () => new DefendCommand());
     this.commands.set(CommandType.INTERACT, () => new InteractCommand());
+    this.commands.set(CommandType.LOOT, () => new LootCommand());
+    this.commands.set(CommandType.RESPAWN, () => new RespawnCommand());
 
     // Comandos que requieren IA (solo si el servicio está disponible)
     if (this.aiService) {
-      this.commands.set(CommandType.GENERATE_NARRATIVE, () => new GenerateNarrativeCommand(this.aiService!));
+      const ai = this.aiService;
+      this.commands.set(CommandType.GENERATE_NARRATIVE, () => new GenerateNarrativeCommand(ai));
+      this.commands.set(CommandType.CUSTOM, () => new ProcessInputCommand(ai));
+      this.commands.set(CommandType.GENERATE_IMAGE, () => new GenerateImageCommand(ai));
     }
   }
 
@@ -44,7 +55,7 @@ export class GameCommandFactory implements ICommandFactory {
     if (!commandFactory) {
       throw new GameError(
         `Unknown or unavailable command type: ${type}`,
-        ErrorCode.INVALID_COMMAND,
+        ErrorCode.INVALID_GAME_ACTION,
         400,
         { commandType: type }
       );
@@ -52,8 +63,8 @@ export class GameCommandFactory implements ICommandFactory {
     return commandFactory();
   }
 
-  getAvailableCommands(): CommandType[] {
-    return Array.from(this.commands.keys());
+  getAvailableCommands(): Array<CommandType> {
+    return [...this.commands.keys()];
   }
 
   isValidCommand(type: string): type is CommandType {

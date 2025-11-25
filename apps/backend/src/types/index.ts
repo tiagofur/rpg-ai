@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /**
  * Tipos base del sistema RPG AI Supreme
  * Estándares enterprise - Dignos de los dioses de la programación
@@ -80,6 +81,22 @@ export enum TokenType {
   PASSWORD_RESET = 'password_reset',
   EMAIL_VERIFICATION = 'email_verification',
   MFA = 'mfa',
+}
+
+export interface IAuthUser {
+  id: UUID;
+  email: string;
+  username: string;
+  role: UserRole;
+  status: AuthStatus;
+  mfaEnabled: boolean;
+  mfaSecret?: string | undefined;
+  lastLoginAt?: Date | undefined;
+  loginAttempts: number;
+  lockedUntil?: Date | undefined;
+  createdAt: Date;
+  updatedAt: Date;
+  stripeCustomerId?: string;
 }
 
 // ===== TIPOS DE JUEGO Y SESIÓN =====
@@ -185,31 +202,34 @@ export enum ErrorCode {
   INVALID_CREDENTIALS = 'INVALID_CREDENTIALS',
   ACCOUNT_SUSPENDED = 'ACCOUNT_SUSPENDED',
   MFA_REQUIRED = 'MFA_REQUIRED',
-  
+
   // Errores de validación
   VALIDATION_ERROR = 'VALIDATION_ERROR',
   INVALID_INPUT = 'INVALID_INPUT',
   MISSING_REQUIRED_FIELD = 'MISSING_REQUIRED_FIELD',
   INVALID_FORMAT = 'INVALID_FORMAT',
-  
+
   // Errores de negocio
   RESOURCE_NOT_FOUND = 'RESOURCE_NOT_FOUND',
   RESOURCE_CONFLICT = 'RESOURCE_CONFLICT',
   INSUFFICIENT_PERMISSIONS = 'INSUFFICIENT_PERMISSIONS',
   OPERATION_NOT_ALLOWED = 'OPERATION_NOT_ALLOWED',
-  
+
   // Errores del juego
   INVALID_GAME_ACTION = 'INVALID_GAME_ACTION',
   GAME_SESSION_NOT_FOUND = 'GAME_SESSION_NOT_FOUND',
   GAME_SESSION_EXPIRED = 'GAME_SESSION_EXPIRED',
   INVALID_GAME_STATE = 'INVALID_GAME_STATE',
-  
+
   // Errores de IA
   AI_PROVIDER_ERROR = 'AI_PROVIDER_ERROR',
   AI_RATE_LIMIT_EXCEEDED = 'AI_RATE_LIMIT_EXCEEDED',
   AI_CONTEXT_TOO_LONG = 'AI_CONTEXT_TOO_LONG',
   AI_INVALID_RESPONSE = 'AI_INVALID_RESPONSE',
-  
+  AI_GENERATION_FAILED = 'AI_GENERATION_FAILED',
+  AI_ANALYSIS_FAILED = 'AI_ANALYSIS_FAILED',
+  AI_STREAM_FAILED = 'AI_STREAM_FAILED',
+
   // Errores del sistema
   INTERNAL_SERVER_ERROR = 'INTERNAL_SERVER_ERROR',
   DATABASE_ERROR = 'DATABASE_ERROR',
@@ -217,7 +237,7 @@ export enum ErrorCode {
   QUEUE_ERROR = 'QUEUE_ERROR',
   RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
   SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE',
-  
+
   // Errores de bloqueo de sesión (concurrencia)
   SESSION_LOCKED = 'SESSION_LOCKED',
   SESSION_LOCK_MISMATCH = 'SESSION_LOCK_MISMATCH',
@@ -341,7 +361,7 @@ export interface AuditableEntity {
  */
 export interface MetadataEntity {
   readonly metadata: Record<string, unknown>;
-  readonly tags: string[];
+  readonly tags: Array<string>;
 }
 
 // ===== TIPOS DE UTILIDAD =====
@@ -359,7 +379,7 @@ export interface Result<T, E = Error> {
 /**
  * Paginación estándar
  */
-export interface PaginationParams {
+export interface PaginationParameters {
   readonly page: number;
   readonly limit: number;
   readonly sortBy?: string;
@@ -370,7 +390,7 @@ export interface PaginationParams {
  * Resultado paginado
  */
 export interface PaginatedResult<T> {
-  readonly items: T[];
+  readonly items: Array<T>;
   readonly total: number;
   readonly page: number;
   readonly limit: number;
@@ -400,6 +420,7 @@ export interface Coordinates {
 /**
  * Longitudes máximas para campos de texto
  */
+// eslint-disable-next-line @typescript-eslint/typedef
 export const TEXT_CONSTRAINTS = {
   MIN_USERNAME_LENGTH: 3,
   MAX_USERNAME_LENGTH: 30,
@@ -418,6 +439,7 @@ export const TEXT_CONSTRAINTS = {
 /**
  * Límites numéricos
  */
+// eslint-disable-next-line @typescript-eslint/typedef
 export const NUMERIC_CONSTRAINTS = {
   MIN_PAGE_SIZE: 1,
   MAX_PAGE_SIZE: 100,
@@ -430,6 +452,7 @@ export const NUMERIC_CONSTRAINTS = {
 /**
  * Duraciones de tiempo
  */
+// eslint-disable-next-line @typescript-eslint/typedef
 export const TIME_CONSTRAINTS = {
   ACCESS_TOKEN_TTL: 15 * 60 * 1000, // 15 minutos
   REFRESH_TOKEN_TTL: 7 * 24 * 60 * 60 * 1000, // 7 días
@@ -443,12 +466,14 @@ export const TIME_CONSTRAINTS = {
 /**
  * Expresiones regulares de validación
  */
+// eslint-disable-next-line @typescript-eslint/typedef
 export const VALIDATION_PATTERNS = {
-  UUID: /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-  EMAIL: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-  USERNAME: /^[a-zA-Z0-9_-]{3,30}$/,
-  PASSWORD: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-  JWT: /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/,
-  BCRYPT_HASH: /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/,
+  UUID: /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i,
+  EMAIL: /^[\w%+.-]+@[\d.A-Za-z-]+\.[A-Za-z]{2,}$/,
+  USERNAME: /^[\w-]{3,30}$/,
+  PASSWORD: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!$%&*?@])[\d!$%&*?@A-Za-z]{8,}$/,
+  // eslint-disable-next-line security/detect-unsafe-regex
+  JWT: /^(?:[\w-]+\.){2}[\w-]+$/,
+  BCRYPT_HASH: /^\$2[aby]\$\d{2}\$[\d./A-Za-z]{53}$/,
   ISO_TIMESTAMP: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
 } as const;

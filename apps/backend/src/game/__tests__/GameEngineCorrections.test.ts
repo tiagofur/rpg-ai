@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { GameEngine, IGameEngineConfig } from '../GameEngine';
-import { v4 as uuidv4 } from 'uuid';
+import { GameEngine } from '../GameEngine.js';
 
 describe('GameEngine - Validación de Correcciones', () => {
-  
+
   it('debe tener el método updateCommandMetrics definido', () => {
     // Verificar que el método existe en el prototipo
     expect(GameEngine.prototype).toHaveProperty('updateCommandMetrics');
@@ -17,7 +16,7 @@ describe('GameEngine - Validación de Correcciones', () => {
   it('debe validar autorización en executeCommand', () => {
     // Verificar que el método executeCommand existe
     expect(GameEngine.prototype).toHaveProperty('executeCommand');
-    
+
     // Verificar que el método tiene la firma correcta
     const executeCommand = GameEngine.prototype.executeCommand;
     expect(executeCommand.length).toBeGreaterThanOrEqual(3); // Debe tener al menos 3 parámetros

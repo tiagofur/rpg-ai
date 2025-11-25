@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { GameEngine, IGameEngineConfig } from '../GameEngine';
+import { GameEngine, IGameEngineConfig } from '../GameEngine.js';
 import { Redis } from 'ioredis';
 import { PrismaClient } from '@prisma/client';
-import { v4 as uuidv4 } from 'uuid';
+import { UUID } from '../interfaces.js';
 
 // Mock de dependencias
 vi.mock('ioredis');
@@ -148,7 +148,7 @@ describe('GameEngine', () => {
 
       const userId = 'test-user-id' as UUID;
       const characterId = 'test-character-id' as UUID;
-      const session = await gameEngine.createSession(userId, characterId);
+      await gameEngine.createSession(userId, characterId);
 
       // Verificar que el mock de Redis fue llamado con datos sanitizados
       expect(mockRedis.setex).toHaveBeenCalledWith(
@@ -168,10 +168,10 @@ describe('GameEngine', () => {
       const session = await gameEngine.createSession(userId, characterId);
 
       // Simular sesión inactiva modificando la fecha de actividad
-      const inactiveSession = {
-        ...session,
-        lastActivity: new Date(Date.now() - 31 * 60 * 1000).toISOString() // 31 minutos atrás
-      };
+      // const inactiveSession = {
+      //   ...session,
+      //   lastActivity: new Date(Date.now() - 31 * 60 * 1000).toISOString() // 31 minutos atrás
+      // };
 
       // Forzar la limpieza llamando al método directamente
       await (gameEngine as any).cleanupInactiveSessions();
@@ -187,7 +187,7 @@ describe('GameEngine', () => {
       gameEngine = new GameEngine(config);
 
       // Forzar un error en el auto-save
-      mockPrisma.gameSession.upsert.mockRejectedValueOnce(new Error('Database error'));
+      (mockPrisma.gameSession.upsert as any).mockRejectedValueOnce(new Error('Database error'));
 
       const userId = 'test-user-id' as UUID;
       const characterId = 'test-character-id' as UUID;

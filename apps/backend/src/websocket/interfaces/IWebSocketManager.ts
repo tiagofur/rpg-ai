@@ -4,7 +4,7 @@ export interface IWebSocketManager {
   sendToSession(sessionId: string, event: string, data: any): void;
   joinRoom(socketId: string, room: string): void;
   leaveRoom(socketId: string, room: string): void;
-  getConnectedUsers(): string[];
+  getConnectedUsers(): Array<string>;
   isUserConnected(userId: string): boolean;
   disconnectUser(userId: string): void;
 }

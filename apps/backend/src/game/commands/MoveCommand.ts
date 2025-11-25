@@ -1,6 +1,16 @@
-import { BaseGameCommand } from './BaseGameCommand';
-import { IGameContext, ICommandResult, ICharacter } from '../interfaces';
-import { GameError, ErrorCode } from '../../errors/GameError';
+import { v4 as uuidv4 } from 'uuid';
+import { BaseGameCommand } from './BaseGameCommand.js';
+import {
+  IGameContext,
+  ICommandResult,
+  IValidationResult,
+  ICommandCost,
+  IGameLogEntry,
+  INotification,
+  LogLevel,
+  CommandType
+} from '../interfaces.js';
+import { GameError, ErrorCode } from '../../errors/GameError.js';
 
 export interface IMoveParameters {
   direction: 'north' | 'south' | 'east' | 'west';
@@ -8,27 +18,31 @@ export interface IMoveParameters {
 }
 
 export class MoveCommand extends BaseGameCommand {
-  protected get commandType(): string {
-    return 'move';
+  constructor() {
+    super(
+      'Move',
+      'Move your character in a specific direction',
+      CommandType.MOVE,
+      500, // 0.5s cooldown
+      1
+    );
   }
 
-  protected get requiredParameters(): string[] {
-    return ['direction'];
-  }
+  protected validateSpecificRequirements(context: IGameContext): IValidationResult {
+    const errors: Array<string> = [];
+    const warnings: Array<string> = [];
+    const requirements: Array<any> = [];
+    const parameters = context.parameters as IMoveParameters;
 
-  protected validate(context: IGameContext): { isValid: boolean; errors: string[] } {
-    const errors: string[] = [];
-    const params = context.parameters as IMoveParameters;
-    
-    if (!params.direction || !['north', 'south', 'east', 'west'].includes(params.direction)) {
+    if (!parameters || !parameters.direction || !['north', 'south', 'east', 'west'].includes(parameters.direction)) {
       errors.push('Invalid direction. Must be north, south, east, or west');
     }
 
-    if (params.distance !== undefined && (params.distance < 1 || params.distance > 10)) {
+    if (parameters && parameters.distance !== undefined && (parameters.distance < 1 || parameters.distance > 10)) {
       errors.push('Distance must be between 1 and 10');
     }
 
-    const character = context.session.character;
+    const { character } = context;
     if (character.status?.includes('stunned')) {
       errors.push('Cannot move while stunned');
     }
@@ -37,173 +51,193 @@ export class MoveCommand extends BaseGameCommand {
       errors.push('Cannot move while rooted');
     }
 
-    if (character.attributes.health <= 0) {
+    if (character.health.current <= 0) {
       errors.push('Cannot move while dead');
     }
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
+      warnings,
+      requirements
     };
   }
 
-  protected calculateCost(context: IGameContext): { health: number; mana: number; stamina: number } {
-    const params = context.parameters as IMoveParameters;
-    const distance = params.distance || 1;
-    const baseStaminaCost = distance * 2;
-    
-    // Reduce cost based on agility
-    const agilityBonus = Math.floor((context.session.character.attributes.agility - 10) / 5);
-    const finalStaminaCost = Math.max(1, baseStaminaCost - agilityBonus);
+  protected calculateBaseCost(context: IGameContext): ICommandCost {
+    const parameters = context.parameters as IMoveParameters;
+    const distance = parameters?.distance || 1;
+    let baseStaminaCost = distance * 2;
+
+    const { character } = context;
+    // Reduce cost based on dexterity (assuming agility maps to dexterity in this system or similar)
+    const agilityBonus = Math.floor((character.attributes.dexterity - 10) / 5);
+    const staminaMultiplier = Math.max(0.5, 1 - (agilityBonus * 0.05)); // 5% reduction per 5 dex points
+
+    baseStaminaCost *= staminaMultiplier;
 
     return {
-      health: 0,
-      mana: 0,
-      stamina: finalStaminaCost
+      stamina: Math.floor(baseStaminaCost),
+      cooldownMs: this.cooldownMs
     };
   }
 
-  protected async executeLogic(context: IGameContext): Promise<ICommandResult> {
-    const params = context.parameters as IMoveParameters;
-    const character = context.session.character;
-    const distance = params.distance || 1;
+  protected async executeSpecificCommand(context: IGameContext): Promise<ICommandResult> {
+    const parameters = context.parameters as IMoveParameters;
+    const { character } = context;
+    const distance = parameters.distance || 1;
+    const logEntries: Array<IGameLogEntry> = [];
+    const notifications: Array<INotification> = [];
 
     // Calculate new position
-    const oldPosition = { ...character.position };
-    const newPosition = this.calculateNewPosition(character.position, params.direction, distance);
+    const oldPosition = character.position ? { ...character.position } : { x: 0, y: 0, z: 0, mapId: 'default', region: 'default' };
+    const targetCoordinates = this.calculateNewCoordinates(oldPosition, parameters.direction, distance);
 
-    // Check if the new position is valid (not blocked by obstacles)
-    if (!await this.isValidPosition(context, newPosition)) {
+    // Find connected location
+    const targetLocation = this.findConnectedLocation(context, targetCoordinates);
+
+    if (!targetLocation) {
       throw new GameError(
-        'Cannot move to that position - path is blocked',
-        ErrorCode.INVALID_TARGET,
+        'Cannot move there - path is blocked or no location exists',
+        ErrorCode.INVALID_GAME_ACTION,
         400
       );
     }
 
+    const newPosition = {
+      ...targetCoordinates,
+      mapId: targetLocation.id,
+      region: (targetLocation as any).type || 'unknown'
+    };
+
     // Update character position
-    character.position = newPosition;
+    // Note: In a real system, this should be done via a state update method or event
+    // character.position = newPosition; // This might be read-only
 
     // Check for traps or hidden objects
     const discoveredObjects = await this.checkForHiddenObjects(context, newPosition);
 
     // Generate movement description
-    const movementDescription = this.generateMovementDescription(params.direction, distance, discoveredObjects);
+    const movementDescription = this.generateMovementDescription(parameters.direction, distance, discoveredObjects, (targetLocation as any).name);
 
-    const logEntries = [
-      {
-        timestamp: new Date(),
-        actor: character.name,
-        action: 'move',
-        target: `${params.direction}${distance > 1 ? ` ${distance} spaces` : ''}`,
-        result: `Moved from (${oldPosition.x}, ${oldPosition.y}) to (${newPosition.x}, ${newPosition.y})`,
-        metadata: {
-          oldPosition,
-          newPosition,
-          distance,
-          staminaCost: this.calculateCost(context).stamina
-        }
+    logEntries.push({
+      id: uuidv4(),
+      timestamp: new Date().toISOString(),
+      level: LogLevel.INFO,
+      category: 'movement',
+      message: `Moved from ${oldPosition.region} to ${newPosition.region} (${(targetLocation as any).name})`,
+      data: {
+        oldPosition,
+        newPosition,
+        distance,
+        direction: parameters.direction
       }
-    ];
+    });
 
-    const notifications = [
-      {
-        type: 'movement' as const,
-        message: movementDescription,
-        recipientId: character.id,
-        priority: 'info' as const,
-        metadata: {
-          position: newPosition,
-          discoveredObjects
-        }
-      }
-    ];
+    notifications.push({
+      id: uuidv4(),
+      type: 'info',
+      title: 'Movement',
+      message: movementDescription,
+      timestamp: new Date().toISOString(),
+      duration: 3000
+    });
 
     // Add discovery notifications
     if (discoveredObjects.length > 0) {
-      discoveredObjects.forEach(obj => {
+      for (const object of discoveredObjects) {
         notifications.push({
-          type: 'discovery' as const,
-          message: `You discovered: ${obj.name}`,
-          recipientId: character.id,
-          priority: 'info' as const,
-          metadata: { discoveredObject: obj }
+          id: uuidv4(),
+          type: 'success',
+          title: 'Discovery',
+          message: `You discovered: ${object.name}`,
+          timestamp: new Date().toISOString(),
+          duration: 5000
         });
-      });
+      }
     }
 
     return {
       success: true,
-      data: {
-        newPosition,
-        discoveredObjects,
-        staminaCost: this.calculateCost(context).stamina
-      },
+      commandId: this.id,
       message: movementDescription,
+      effects: [], // effects
+      rewards: [], // rewards
+      experienceGained: 0, // experience
+      newState: { entities: { [character.id]: { id: character.id, type: 'character', data: { position: newPosition } } } }, // newState
       logEntries,
       notifications
     };
   }
 
-  private calculateNewPosition(
-    currentPosition: { x: number; y: number },
+  private calculateNewCoordinates(
+    currentPosition: { x: number; y: number; z: number },
     direction: string,
     distance: number
-  ): { x: number; y: number } {
+  ): { x: number; y: number; z: number } {
     const newPosition = { ...currentPosition };
-    
+
     switch (direction) {
-      case 'north':
+      case 'north': {
         newPosition.y -= distance;
         break;
-      case 'south':
+      }
+      case 'south': {
         newPosition.y += distance;
         break;
-      case 'east':
+      }
+      case 'east': {
         newPosition.x += distance;
         break;
-      case 'west':
+      }
+      case 'west': {
         newPosition.x -= distance;
         break;
+      }
     }
 
     return newPosition;
   }
 
-  private async isValidPosition(context: IGameContext, position: { x: number; y: number }): Promise<boolean> {
-    // Check map boundaries
-    if (position.x < 0 || position.y < 0) {
-      return false;
-    }
+  private findConnectedLocation(context: IGameContext, coordinates: { x: number; y: number }): any | null {
+    const currentLocation = context.location;
+    if (!currentLocation || !currentLocation.connections) return null;
 
-    // Check for obstacles (this would typically query the game world/map data)
-    // For now, we'll simulate some basic terrain checks
-    const gameWorld = await context.services.worldService.getTerrainAt(position);
-    return gameWorld?.passable !== false;
+    for (const connectionId of currentLocation.connections) {
+      const entity = context.gameState.entities[connectionId];
+      if (entity && entity.type === 'location') {
+        const location = entity.data as any;
+        if (location.coordinates.x === coordinates.x && location.coordinates.y === coordinates.y) {
+          return location;
+        }
+      }
+    }
+    return null;
   }
 
-  private async checkForHiddenObjects(context: IGameContext, position: { x: number; y: number }): Promise<Array<{ id: string; name: string; type: string }>> {
+  private async checkForHiddenObjects(context: IGameContext, _position: { x: number; y: number }): Promise<Array<{ id: string; name: string; type: string }>> {
     // Simulate discovering hidden objects based on character's perception
-    const character = context.session.character;
+    const { character } = context;
     const perceptionCheck = character.attributes.intelligence + character.attributes.wisdom;
     const discoveredObjects: Array<{ id: string; name: string; type: string }> = [];
 
     // Higher perception = higher chance to discover things
     const discoveryChance = Math.min(0.8, perceptionCheck / 40);
-    
+
     if (Math.random() < discoveryChance) {
-      const possibleObjects = [
+      const possibleObjects: Array<{ name: string; type: string }> = [
         { name: 'Hidden Treasure', type: 'treasure' },
         { name: 'Secret Passage', type: 'passage' },
         { name: 'Ancient Rune', type: 'rune' },
         { name: 'Mysterious Herb', type: 'herb' }
       ];
-      
+
       const discovered = possibleObjects[Math.floor(Math.random() * possibleObjects.length)];
-      discoveredObjects.push({
-        id: `discovered_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        ...discovered
-      });
+      if (discovered) {
+        discoveredObjects.push({
+          id: `discovered_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+          ...discovered
+        });
+      }
     }
 
     return discoveredObjects;
@@ -212,17 +246,22 @@ export class MoveCommand extends BaseGameCommand {
   private generateMovementDescription(
     direction: string,
     distance: number,
-    discoveredObjects: Array<{ name: string }>
+    discoveredObjects: Array<{ name: string }>,
+    locationName?: string
   ): string {
-    const directionDescriptions = {
+    const directionDescriptions: Record<string, string> = {
       north: 'north',
       south: 'south',
       east: 'east',
       west: 'west'
     };
 
-    let description = `You moved ${distance} space${distance > 1 ? 's' : ''} to the ${directionDescriptions[direction as keyof typeof directionDescriptions]}.`;
-    
+    let description = `You moved ${distance} space${distance > 1 ? 's' : ''} to the ${directionDescriptions[direction]}`;
+    if (locationName) {
+      description += ` and arrived at ${locationName}`;
+    }
+    description += '.';
+
     if (discoveredObjects.length > 0) {
       description += ` You discovered ${discoveredObjects.length} interesting ${discoveredObjects.length > 1 ? 'things' : 'thing'}.`;
     }

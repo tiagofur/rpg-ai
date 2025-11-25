@@ -6,31 +6,39 @@ import { Server as SocketIOServer, type Socket } from "socket.io";
 import {
   actionResolutionSchema,
   playerActionSchema
-} from "@rpg-ai/shared";
+} from "./shared/index.js";
 
-import { env } from "./env";
-import prismaPlugin from "./plugins/prisma";
-import { registerSessionRoutes } from "./routes/session";
-import { registerCharacterRoutes } from "./routes/character";
-import { stripeRoutes } from "./routes/stripe";
-import { PremiumFeaturesService } from "./services/PremiumFeaturesService";
-import { AuthenticationService } from "./services/AuthenticationService";
-import { RedisClient } from "./utils/redis";
+import { env as environment } from "./env.js";
+import prismaPlugin from "./plugins/prisma.js";
+import { registerSessionRoutes } from "./routes/session.js";
+import { registerCharacterRoutes } from "./routes/character.js";
+import { registerGameRoutes } from "./routes/game.js";
+import { stripeRoutes } from "./routes/stripe.js";
+import { guildRoutes } from "./routes/guild.js";
+import { PremiumFeaturesService } from "./services/PremiumFeaturesService.js";
+import { AuthenticationService } from "./services/AuthenticationService.js";
+import { RedisClient } from "./utils/redis.js";
 
-const isProduction = process.env.NODE_ENV === "production";
+import { GameService } from "./game/GameService.js";
+import { GuildService } from "./social/guild/GuildService.js";
+import { ConsoleLogger } from "./logging/ConsoleLogger.js";
+import { CommandType } from "./game/interfaces.js";
+import { IRedisClient } from "./cache/interfaces/IRedisClient.js";
+
+const isProduction = environment.NODE_ENV === "production";
 
 const fastify = Fastify({
   logger: isProduction
     ? true
     : {
-        transport: {
-          target: "pino-pretty",
-          options: {
-            colorize: true,
-            singleLine: true
-          }
+      transport: {
+        target: "pino-pretty",
+        options: {
+          colorize: true,
+          singleLine: true
         }
       }
+    }
 });
 
 await fastify.register(prismaPlugin);
@@ -53,22 +61,37 @@ fastify.get("/api/health", async () => ({ status: "ok" }));
 
 await fastify.register(registerSessionRoutes);
 await fastify.register(registerCharacterRoutes);
+await fastify.register(registerGameRoutes);
 
 // Initialize services
 const redis = new RedisClient({
-  host: env.REDIS_HOST,
-  port: env.REDIS_PORT,
-  password: env.REDIS_PASSWORD,
-  db: env.REDIS_DB,
+  host: environment.REDIS_HOST,
+  port: environment.REDIS_PORT,
+  ...(environment.REDIS_PASSWORD ? { password: environment.REDIS_PASSWORD } : {}),
+  db: environment.REDIS_DB,
 });
 
-const authService = new AuthenticationService(fastify.prisma, redis);
+// Initialize Game Service
+const gameService = GameService.getInstance();
+
+const authConfig = {
+  jwtSecret: environment.JWT_SECRET,
+  jwtRefreshSecret: environment.JWT_REFRESH_SECRET,
+  redis,
+  bcryptRounds: 10,
+  maxLoginAttempts: 5,
+  lockoutDuration: 15 * 60 * 1000, // 15 minutes
+  mfaIssuer: 'RPG-AI'
+};
+
+const authService = new AuthenticationService(authConfig, fastify.prisma);
 
 const premiumService = new PremiumFeaturesService(
-  env.STRIPE_SECRET_KEY,
-  env.STRIPE_WEBHOOK_SECRET,
+  environment.STRIPE_SECRET_KEY,
+  environment.STRIPE_WEBHOOK_SECRET,
   authService,
-  redis
+  redis,
+  fastify.prisma
 );
 
 // Register Stripe routes
@@ -78,6 +101,15 @@ await fastify.register(stripeRoutes, {
   redis,
 });
 
+// Initialize Guild Service
+const logger = new ConsoleLogger('GuildService');
+const guildService = new GuildService(redis as unknown as IRedisClient, logger, fastify.prisma);
+
+// Register Guild routes
+await fastify.register(guildRoutes, {
+  guildService
+});
+
 const io = new SocketIOServer(fastify.server, {
   cors: {
     origin: true,
@@ -85,38 +117,15 @@ const io = new SocketIOServer(fastify.server, {
   }
 });
 
-type AckResponse = (response: { ok?: boolean; error?: unknown }) => void;
-
-io.on("connection", (socket: Socket) => {
-  socket.on("player:action", async (rawPayload: unknown, ack?: AckResponse) => {
-    const parsed = playerActionSchema.safeParse(rawPayload);
-
-    if (!parsed.success) {
-      if (ack) {
-        ack({ error: parsed.error.flatten() });
-      }
-      return;
-    }
-
-    const resolution = actionResolutionSchema.parse({
-      narration: "La IA-DJ aún no está conectada, pero recibimos tu acción.",
-      stateChanges: {},
-      imageTrigger: false,
-      version: "1.0"
-    });
-
-    socket.emit("player:resolution", resolution);
-
-    if (ack) {
-      ack({ ok: true });
-    }
-  });
-});
+// Initialize WebSocket Service
+import { WebSocketService } from "./websocket/WebSocketService.js";
+const wsLogger = new ConsoleLogger('WebSocketService');
+const webSocketService = new WebSocketService(io, authService, gameService, wsLogger);
 
 const start = async () => {
   try {
-    await fastify.listen({ port: env.PORT, host: "0.0.0.0" });
-    fastify.log.info(`Backend listening on port ${env.PORT}`);
+    await fastify.listen({ port: environment.PORT, host: "0.0.0.0" });
+    fastify.log.info(`Backend listening on port ${environment.PORT}`);
   } catch (error) {
     fastify.log.error(error);
     process.exit(1);

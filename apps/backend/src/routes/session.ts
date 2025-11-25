@@ -3,9 +3,9 @@ import type { FastifyInstance } from "fastify";
 import {
   createSessionInputSchema,
   createSessionResponseSchema
-} from "@rpg-ai/shared";
+} from "../shared/index.js";
 
-import { serializeSession } from "../utils/serializers";
+import { serializeSession } from "../utils/serializers.js";
 
 const RNG_MAX = 2 ** 32;
 
@@ -22,12 +22,12 @@ export async function registerSessionRoutes(fastify: FastifyInstance) {
       const sessionId = randomUUID();
       const sessionSeed = seed ?? randomInt(RNG_MAX);
 
-      const created = await fastify.prisma.session.create({
+      const created = await fastify.prisma.gameSession.create({
         data: {
           id: sessionId,
           ownerId,
           title,
-          summary,
+          summary: summary ?? null,
           seed: sessionSeed,
           currentTurn: 0
         },
@@ -40,7 +40,7 @@ export async function registerSessionRoutes(fastify: FastifyInstance) {
         session: serializeSession(created)
       });
 
-      return reply.status(201).send(payload);
+      return await reply.status(201).send(payload);
     } catch (error) {
       request.log.error({ err: error }, "Failed to create session");
       return reply.status(500).send({ error: { message: "SESSION_CREATE_FAILED" } });

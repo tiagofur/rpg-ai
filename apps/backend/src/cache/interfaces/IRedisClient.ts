@@ -1,50 +1,36 @@
+import { ChainableCommander } from 'ioredis';
+
 export interface IRedisClient {
   get(key: string): Promise<string | null>;
-  set(key: string, value: string, ttl?: number): Promise<void>;
-  setex(key: string, seconds: number, value: string): Promise<void>;
-  del(key: string): Promise<void>;
-  exists(key: string): Promise<boolean>;
+  set(key: string, value: string | number | Buffer, ttl?: number | string): Promise<string | null>;
+  setex(key: string, seconds: number, value: string): Promise<string>;
+  del(key: string): Promise<number>;
+  exists(key: string): Promise<number>;
   incr(key: string): Promise<number>;
   decr(key: string): Promise<number>;
-  expire(key: string, seconds: number): Promise<void>;
+  expire(key: string, seconds: number): Promise<number>;
   ttl(key: string): Promise<number>;
-  keys(pattern: string): Promise<string[]>;
-  flushdb(): Promise<void>;
-  pipeline(): IRedisPipeline;
-  multi(): IRedisMulti;
-  subscribe(channels: string[]): Promise<void>;
-  unsubscribe(channels: string[]): Promise<void>;
+  keys(pattern: string): Promise<Array<string>>;
+  flushdb(): Promise<string>;
+  pipeline(): ChainableCommander;
+  multi(): ChainableCommander;
+  subscribe(...args: (string | Buffer)[]): Promise<unknown>;
+  unsubscribe(...args: (string | Buffer)[]): Promise<unknown>;
   publish(channel: string, message: string): Promise<number>;
-  on(event: string, handler: (data: any) => void): void;
-  off(event: string, handler: (data: any) => void): void;
-  disconnect(): Promise<void>;
+  on(event: string | symbol, handler: (...args: unknown[]) => void): this;
+  off(event: string | symbol, handler: (...args: unknown[]) => void): this;
+  disconnect(): void;
   connect(): Promise<void>;
   isConnected(): boolean;
-  sadd(key: string, ...members: string[]): Promise<number>;
-  srem(key: string, ...members: string[]): Promise<number>;
+  sadd(key: string, ...members: Array<string>): Promise<number>;
+  srem(key: string, ...members: Array<string>): Promise<number>;
   sismember(key: string, member: string): Promise<number>;
-  smembers(key: string): Promise<string[]>;
-  lpush(key: string, ...values: string[]): Promise<number>;
-  lrange(key: string, start: number, stop: number): Promise<string[]>;
-  lset(key: string, index: number, value: string): Promise<void>;
-}
-
-export interface IRedisPipeline {
-  get(key: string): IRedisPipeline;
-  set(key: string, value: string): IRedisPipeline;
-  del(key: string): IRedisPipeline;
-  incr(key: string): IRedisPipeline;
-  expire(key: string, seconds: number): IRedisPipeline;
-  exec(): Promise<any[]>;
-}
-
-export interface IRedisMulti {
-  get(key: string): IRedisMulti;
-  set(key: string, value: string): IRedisMulti;
-  del(key: string): IRedisMulti;
-  incr(key: string): IRedisMulti;
-  expire(key: string, seconds: number): IRedisMulti;
-  exec(): Promise<any[]>;
+  smembers(key: string): Promise<Array<string>>;
+  lpush(key: string, ...values: Array<string>): Promise<number>;
+  lrange(key: string, start: number, stop: number): Promise<Array<string>>;
+  lset(key: string, index: number, value: string): Promise<string>;
+  ltrim(key: string, start: number, stop: number): Promise<string>;
+  zadd(key: string, score: number, member: string): Promise<number>;
 }
 
 export interface ICacheClient {

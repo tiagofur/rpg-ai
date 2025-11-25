@@ -1,8 +1,8 @@
 import fp from 'fastify-plugin';
 import { FastifyInstance } from 'fastify';
-import { ApiGateway } from './ApiGateway';
-import { apiGatewayConfig } from './config';
-import { securityConfig, isSuspiciousRequest } from './config';
+import { ApiGateway } from '../gateway/ApiGateway.js';
+import { apiGatewayConfig , securityConfig, isSuspiciousRequest } from '../gateway/config.js';
+
 
 export interface GatewayPluginOptions {
   enableSecurity?: boolean;
@@ -12,13 +12,13 @@ export interface GatewayPluginOptions {
 
 export default fp(async (fastify: FastifyInstance, options: GatewayPluginOptions = {}) => {
   const { enableSecurity = true, enableMetrics = true, enableLogging = true } = options;
-  
+
   // Inicializar API Gateway
   const gateway = new ApiGateway(apiGatewayConfig);
-  
+
   // Registrar el gateway con Fastify
   await gateway.register(fastify);
-  
+
   // Middleware de seguridad
   if (enableSecurity) {
     fastify.addHook('onRequest', async (request, reply) => {
@@ -30,7 +30,7 @@ export default fp(async (fastify: FastifyInstance, options: GatewayPluginOptions
         });
         return;
       }
-      
+
       // Verificar requests sospechosos
       if (isSuspiciousRequest(request)) {
         reply.code(400).send({
@@ -39,7 +39,7 @@ export default fp(async (fastify: FastifyInstance, options: GatewayPluginOptions
         });
         return;
       }
-      
+
       // Verificar headers requeridos
       const requiredHeaders = ['user-agent'];
       for (const header of requiredHeaders) {
@@ -53,37 +53,37 @@ export default fp(async (fastify: FastifyInstance, options: GatewayPluginOptions
       }
     });
   }
-  
+
   // Middleware de métricas
   if (enableMetrics) {
     fastify.addHook('onRequest', async (request) => {
-      request.startTime = Date.now();
+      (request as any).startTime = Date.now();
       await gateway.incrementMetric('total_requests');
     });
-    
+
     fastify.addHook('onResponse', async (request, reply) => {
       const responseTime = Date.now() - (request as any).startTime;
       await gateway.updateResponseTime(responseTime);
-      
+
       // Registrar errores
       if (reply.statusCode >= 400) {
         await gateway.incrementMetric('error_requests');
-        
+
         // Registrar fallos por servicio
-        const serviceName = (request as any).url?.match(/^\/api\/([^\/]+)/)?.[1];
+        const serviceName = (request as any).url?.match(/^\/api\/([^/]+)/)?.[1];
         if (serviceName && reply.statusCode >= 500) {
           await gateway.recordServiceFailure(serviceName);
         }
       } else {
         // Registrar éxitos por servicio
-        const serviceName = (request as any).url?.match(/^\/api\/([^\/]+)/)?.[1];
+        const serviceName = (request as any).url?.match(/^\/api\/([^/]+)/)?.[1];
         if (serviceName) {
           await gateway.recordServiceSuccess(serviceName);
         }
       }
     });
   }
-  
+
   // Middleware de logging
   if (enableLogging) {
     fastify.addHook('onRequest', async (request) => {
@@ -95,7 +95,7 @@ export default fp(async (fastify: FastifyInstance, options: GatewayPluginOptions
         timestamp: new Date().toISOString()
       }, 'Incoming request');
     });
-    
+
     fastify.addHook('onResponse', async (request, reply) => {
       const responseTime = Date.now() - (request as any).startTime;
       request.log.info({
@@ -108,10 +108,10 @@ export default fp(async (fastify: FastifyInstance, options: GatewayPluginOptions
       }, 'Request completed');
     });
   }
-  
+
   // Decorar fastify con métodos del gateway
   fastify.decorate('gateway', gateway);
-  
+
 }, {
   name: 'api-gateway',
   dependencies: ['@fastify/rate-limit']

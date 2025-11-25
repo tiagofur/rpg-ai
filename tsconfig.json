@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./apps/backend/src/*"],
+      "@rpg-ai/shared": ["./packages/shared/src"]
+    }
+  },
+  "include": ["apps/**/*", "packages/**/*", "scripts/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+}

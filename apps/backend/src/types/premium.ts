@@ -255,7 +255,7 @@ export const PLAN_CONFIG = {
     name: 'Premium',
     description: 'Para aventureros serios',
     limits: {
-      aiRequestsPerMonth: 10000,
+      aiRequestsPerMonth: 10_000,
       imagesPerMonth: 500,
       savedGames: 50,
       characters: 10,
@@ -285,7 +285,7 @@ export const PLAN_CONFIG = {
       imagesPerMonth: -1, // Ilimitado
       savedGames: -1, // Ilimitado
       characters: -1, // Ilimitado
-      storageMB: 10000,
+      storageMB: 10_000,
       maxPartySize: 16,
     },
     pricing: {
@@ -314,8 +314,6 @@ export const hasPremiumAccess = (
   userPlan: SubscriptionPlan,
   feature: PremiumFeature
 ): boolean => {
-  const planConfig = PLAN_CONFIG[userPlan];
-
   // Características gratuitas
   const freeFeatures = [
     PremiumFeature.PREMIUM_PROFILE_BADGE, // Solo el badge es premium

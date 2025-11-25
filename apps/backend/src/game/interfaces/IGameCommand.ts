@@ -5,8 +5,8 @@ export interface IGameCommand {
   readonly type: CommandType;
   readonly cooldownMs: number;
   readonly requiredLevel: number;
-  readonly requiredItems?: string[];
-  readonly requiredSkills?: string[];
+  readonly requiredItems?: Array<string>;
+  readonly requiredSkills?: Array<string>;
   
   execute(context: IGameContext): Promise<ICommandResult>;
   validate(context: IGameContext): IValidationResult;
@@ -19,19 +19,19 @@ export interface ICommandResult {
   readonly success: boolean;
   readonly commandId: string;
   readonly message: string;
-  readonly effects: IGameEffect[];
-  readonly rewards?: IReward[];
+  readonly effects: Array<IGameEffect>;
+  readonly rewards?: Array<IReward>;
   readonly experienceGained?: number;
   readonly newState?: Partial<IGameState>;
-  readonly logEntries: IGameLogEntry[];
-  readonly notifications: INotification[];
+  readonly logEntries: Array<IGameLogEntry>;
+  readonly notifications: Array<INotification>;
 }
 
 export interface IValidationResult {
   readonly isValid: boolean;
-  readonly errors: string[];
-  readonly warnings: string[];
-  readonly requirements: IRequirementCheck[];
+  readonly errors: Array<string>;
+  readonly warnings: Array<string>;
+  readonly requirements: Array<IRequirementCheck>;
 }
 
 export interface ICommandCost {
@@ -39,7 +39,7 @@ export interface ICommandCost {
   readonly stamina?: number;
   readonly health?: number;
   readonly gold?: number;
-  readonly items?: IItemCost[];
+  readonly items?: Array<IItemCost>;
   readonly cooldownMs?: number;
 }
 
@@ -47,7 +47,7 @@ export interface IUndoResult {
   readonly success: boolean;
   readonly message: string;
   readonly restoredState?: Partial<IGameState>;
-  readonly logEntries: IGameLogEntry[];
+  readonly logEntries: Array<IGameLogEntry>;
 }
 
 export interface IRequirementCheck {
@@ -101,8 +101,8 @@ export interface IGameState {
   readonly sessionId: string;
   readonly currentTurn: number;
   readonly phase: GamePhase;
-  readonly activeEffects: IGameEffect[];
-  readonly history: IGameEvent[];
+  readonly activeEffects: Array<IGameEffect>;
+  readonly history: Array<IGameEvent>;
   readonly entities: Map<string, IGameEntity>;
   readonly combat?: ICombatState;
   readonly dialogue?: IDialogueState;
@@ -117,13 +117,13 @@ export interface IGameEntity {
 
 export interface ICombatState {
   readonly combatId: string;
-  readonly participants: ICombatParticipant[];
-  readonly turnOrder: string[];
+  readonly participants: Array<ICombatParticipant>;
+  readonly turnOrder: Array<string>;
   readonly currentTurn: number;
   readonly currentParticipant: string;
   readonly round: number;
   readonly phase: CombatPhase;
-  readonly log: ICombatLogEntry[];
+  readonly log: Array<ICombatLogEntry>;
 }
 
 export interface ICombatParticipant {
@@ -138,8 +138,8 @@ export interface ICombatParticipant {
 export interface ITradeState {
   readonly tradeId: string;
   readonly merchantId: string;
-  readonly playerItems: ITradeItem[];
-  readonly merchantItems: ITradeItem[];
+  readonly playerItems: Array<ITradeItem>;
+  readonly merchantItems: Array<ITradeItem>;
   readonly totalCost: number;
   readonly currency: string;
 }
@@ -153,8 +153,8 @@ export interface ITradeItem {
 export interface IDialogueState {
   readonly dialogueId: string;
   readonly npcId: string;
-  readonly availableResponses: IDialogueResponse[];
-  readonly dialogueHistory: IDialogueEntry[];
+  readonly availableResponses: Array<IDialogueResponse>;
+  readonly dialogueHistory: Array<IDialogueEntry>;
   readonly currentNode: string;
 }
 
@@ -162,8 +162,8 @@ export interface IDialogueResponse {
   readonly id: string;
   readonly text: string;
   readonly nextNode?: string;
-  readonly requirements?: IRequirementCheck[];
-  readonly effects?: IGameEffect[];
+  readonly requirements?: Array<IRequirementCheck>;
+  readonly effects?: Array<IGameEffect>;
 }
 
 export interface IDialogueEntry {
@@ -182,7 +182,7 @@ export interface ICombatLogEntry {
   readonly damage?: number;
   readonly hitChance?: number;
   readonly critical?: boolean;
-  readonly effects?: IGameEffect[];
+  readonly effects?: Array<IGameEffect>;
 }
 
 export interface IPosition {
@@ -238,12 +238,12 @@ export interface ICharacter {
   readonly skills: Map<string, ISkill>;
   readonly inventory: IInventory;
   readonly equipment: IEquipment;
-  readonly effects: IGameEffect[];
+  readonly effects: Array<IGameEffect>;
   readonly faction?: string;
   readonly isPlayer: boolean;
   readonly isHostile: boolean;
   readonly aiBehavior?: IAIBehavior;
-  readonly status?: string[];
+  readonly status?: Array<string>;
   readonly position?: IPosition;
 }
 
@@ -277,7 +277,7 @@ export interface ISkill {
 export interface IInventory {
   readonly maxCapacity: number;
   readonly currentWeight: number;
-  readonly items: IItem[];
+  readonly items: Array<IItem>;
   readonly gold: number;
 }
 
@@ -291,8 +291,8 @@ export interface IItem {
   readonly weight: number;
   readonly stackable: boolean;
   readonly quantity: number;
-  readonly requirements?: IRequirementCheck[];
-  readonly effects?: IGameEffect[];
+  readonly requirements?: Array<IRequirementCheck>;
+  readonly effects?: Array<IGameEffect>;
   readonly durability?: IDurability;
   readonly stats?: IItemStats;
 }
@@ -329,7 +329,7 @@ export interface IEquipment {
 export interface IAIBehavior {
   readonly type: 'aggressive' | 'defensive' | 'neutral' | 'friendly';
   readonly difficulty: 'easy' | 'medium' | 'hard' | 'legendary';
-  readonly preferredActions: CommandType[];
+  readonly preferredActions: Array<CommandType>;
   readonly reactionRadius: number;
   readonly combatStrategy: string;
 }
@@ -340,9 +340,9 @@ export interface ILocation {
   readonly description: string;
   readonly type: string;
   readonly coordinates: IPosition;
-  readonly connections: string[];
-  readonly objects: IGameObject[];
-  readonly characters: ICharacter[];
+  readonly connections: Array<string>;
+  readonly objects: Array<IGameObject>;
+  readonly characters: Array<ICharacter>;
   readonly weather?: IWeather;
   readonly timeOfDay?: string;
 }
@@ -354,7 +354,7 @@ export interface IGameObject {
   readonly type: string;
   readonly isInteractable: boolean;
   readonly isCollectible: boolean;
-  readonly effects?: IGameEffect[];
+  readonly effects?: Array<IGameEffect>;
   readonly script?: string;
 }
 
@@ -362,7 +362,7 @@ export interface IParty {
   readonly id: string;
   readonly name: string;
   readonly leaderId: string;
-  readonly members: string[];
+  readonly members: Array<string>;
   readonly maxSize: number;
   readonly sharedExperience: boolean;
   readonly sharedLoot: boolean;

@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 
 export interface IGameEvent {
   id: string;
@@ -23,16 +23,16 @@ export interface IGameEventService {
   on(eventType: string, handler: (event: IGameEvent) => Promise<void> | void, priority?: number): void;
   off(eventType: string, handler: (event: IGameEvent) => Promise<void> | void): void;
   once(eventType: string, handler: (event: IGameEvent) => Promise<void> | void): void;
-  getEventHistory(sessionId: string, eventTypes?: string[]): Promise<IGameEvent[]>;
+  getEventHistory(sessionId: string, eventTypes?: Array<string>): Promise<Array<IGameEvent>>;
   clearEventHistory(sessionId: string): Promise<void>;
 }
 
 export interface IGameEventEmitter extends EventEmitter {
-  emitAsync(event: string | symbol, ...args: any[]): Promise<boolean>;
+  emitAsync(event: string | symbol, ...arguments_: Array<any>): Promise<boolean>;
 }
 
 export interface IEventFilter {
-  eventTypes?: string[];
+  eventTypes?: Array<string>;
   source?: string;
   target?: string;
   userId?: string;

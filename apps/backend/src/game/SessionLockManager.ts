@@ -1,8 +1,8 @@
 import { Redis } from 'ioredis';
+import { v4 as uuidv4 } from 'uuid';
 import { GameError } from '../errors/GameError.js';
 import { ErrorCode } from '../types/index.js';
-import { ILogger } from '../utils/logging/ILogger.js';
-import { v4 as uuidv4 } from 'uuid';
+import { ILogger } from '../logging/interfaces/ILogger.js';
 
 export interface ISessionLock {
   sessionId: string;
@@ -18,13 +18,17 @@ export interface ISessionLockManager {
   isLocked(sessionId: string): Promise<boolean>;
   getLockInfo(sessionId: string): Promise<ISessionLock | null>;
   forceRelease(sessionId: string): Promise<void>;
+  withSessionLock<T>(sessionId: string, owner: string, operation: () => Promise<T>, timeoutMs?: number): Promise<T>;
+  cleanupExpiredLocks(): Promise<number>;
 }
 
 export class SessionLockManager implements ISessionLockManager {
   private readonly redis: Redis;
+
   private readonly logger: ILogger;
-  private readonly defaultTimeoutMs: number;
+
   private readonly lockPrefix = 'session_lock:';
+
   private readonly lockTimeoutMs: number;
 
   constructor(redis: Redis, logger: ILogger, options?: {
@@ -33,15 +37,15 @@ export class SessionLockManager implements ISessionLockManager {
   }) {
     this.redis = redis;
     this.logger = logger;
-    this.defaultTimeoutMs = options?.defaultTimeoutMs || 30000; // 30 seconds
-    this.lockTimeoutMs = options?.lockTimeoutMs || 60000; // 60 seconds default lock timeout
+    // this._defaultTimeoutMs = options?.defaultTimeoutMs || 30000; // 30 seconds
+    this.lockTimeoutMs = options?.lockTimeoutMs || 60_000; // 60 seconds default lock timeout
   }
 
   async acquireLock(sessionId: string, owner: string, timeoutMs?: number): Promise<ISessionLock> {
     const lockId = uuidv4();
     const lockKey = this.getLockKey(sessionId);
-    const timeout = timeoutMs || this.defaultTimeoutMs;
-    const expiresAt = new Date(Date.now() + this.lockTimeoutMs);
+    const effectiveTimeout = timeoutMs || this.lockTimeoutMs;
+    const expiresAt = new Date(Date.now() + effectiveTimeout);
 
     // Intentar adquirir el bloqueo con SET NX EX (atomic operation)
     const acquired = await this.redis.set(
@@ -52,9 +56,9 @@ export class SessionLockManager implements ISessionLockManager {
         acquiredAt: new Date().toISOString(),
         expiresAt: expiresAt.toISOString()
       }),
-      'NX',
       'PX',
-      this.lockTimeoutMs
+      effectiveTimeout,
+      'NX'
     );
 
     if (!acquired) {
@@ -67,8 +71,9 @@ export class SessionLockManager implements ISessionLockManager {
       }
 
       throw new GameError(
-        ErrorCode.SESSION_LOCKED,
         `Session ${sessionId} is already locked by ${existingLock?.owner || 'unknown'}`,
+        ErrorCode.SESSION_LOCKED,
+        409,
         { sessionId, existingLock }
       );
     }
@@ -99,8 +104,9 @@ export class SessionLockManager implements ISessionLockManager {
       const lock = JSON.parse(lockData);
       if (lock.lockId !== lockId) {
         throw new GameError(
-          ErrorCode.SESSION_LOCK_MISMATCH,
           `Lock ID mismatch. Expected: ${lockId}, Found: ${lock.lockId}`,
+          ErrorCode.SESSION_LOCK_MISMATCH,
+          409,
           { sessionId, lockId, foundLockId: lock.lockId }
         );
       }
@@ -113,8 +119,9 @@ export class SessionLockManager implements ISessionLockManager {
         throw error;
       }
       throw new GameError(
-        ErrorCode.SESSION_LOCK_ERROR,
         'Error releasing session lock',
+        ErrorCode.SESSION_LOCK_ERROR,
+        500,
         { sessionId, lockId, error: error instanceof Error ? error.message : String(error) }
       );
     }

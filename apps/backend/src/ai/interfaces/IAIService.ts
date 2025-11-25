@@ -6,22 +6,27 @@ export interface IAIService {
   /**
    * Genera contenido de texto basado en un prompt
    */
-  generateText(params: ITextGenerationParams): Promise<ITextGenerationResult>;
+  generateText(parameters: ITextGenerationParameters): Promise<ITextGenerationResult>;
 
   /**
    * Genera una imagen basada en un prompt
    */
-  generateImage(params: IImageGenerationParams): Promise<IImageGenerationResult>;
+  generateImage(parameters: IImageGenerationParameters): Promise<IImageGenerationResult>;
 
   /**
    * Procesa y analiza una imagen existente
    */
-  analyzeImage(params: IImageAnalysisParams): Promise<IImageAnalysisResult>;
+  analyzeImage(parameters: IImageAnalysisParameters): Promise<IImageAnalysisResult>;
 
   /**
    * Genera contenido de forma asíncrona con streaming
    */
-  generateTextStream(params: ITextGenerationParams): Promise<ReadableStream>;
+  generateTextStream(parameters: ITextGenerationParameters): Promise<ReadableStream>;
+
+  /**
+   * Genera una acción de juego estructurada (JSON) basada en un prompt
+   */
+  generateGameAction(parameters: ITextGenerationParameters): Promise<IGameActionResult>;
 
   /**
    * Obtiene el estado del servicio
@@ -30,9 +35,25 @@ export interface IAIService {
 }
 
 /**
+ * Resultado de una acción de juego generada por IA
+ */
+export interface IGameActionResult {
+  narration: string;
+  stateChanges: Record<string, unknown>;
+  imageTrigger: boolean;
+  imagePrompt: string;
+  metadata: {
+    diceRoll: number;
+    probability: number;
+    resolution: string;
+  };
+  usage: IUsageMetrics;
+}
+
+/**
  * Parámetros para generación de texto
  */
-export interface ITextGenerationParams {
+export interface ITextGenerationParameters {
   prompt: string;
   context?: IAIContext;
   model?: AIModel;
@@ -40,8 +61,8 @@ export interface ITextGenerationParams {
   maxTokens?: number;
   topP?: number;
   topK?: number;
-  stopSequences?: string[];
-  safetySettings?: ISafetySetting[];
+  stopSequences?: Array<string>;
+  safetySettings?: Array<ISafetySetting>;
   generationConfig?: IGenerationConfig;
 }
 
@@ -53,14 +74,14 @@ export interface ITextGenerationResult {
   usage: IUsageMetrics;
   model: string;
   finishReason: string;
-  safetyRatings?: ISafetyRating[];
-  candidates?: ICandidate[];
+  safetyRatings?: Array<ISafetyRating>;
+  candidates?: Array<ICandidate>;
 }
 
 /**
  * Parámetros para generación de imagen
  */
-export interface IImageGenerationParams {
+export interface IImageGenerationParameters {
   prompt: string;
   model?: ImageModel;
   aspectRatio?: AspectRatio;
@@ -74,7 +95,7 @@ export interface IImageGenerationParams {
  * Resultado de generación de imagen
  */
 export interface IImageGenerationResult {
-  images: IGeneratedImage[];
+  images: Array<IGeneratedImage>;
   usage: IUsageMetrics;
   model: string;
 }
@@ -82,7 +103,7 @@ export interface IImageGenerationResult {
 /**
  * Parámetros para análisis de imagen
  */
-export interface IImageAnalysisParams {
+export interface IImageAnalysisParameters {
   image: Buffer | string; // Buffer o URL base64
   prompt?: string;
   model?: AIModel;
@@ -95,7 +116,7 @@ export interface IImageAnalysisParams {
  */
 export interface IImageAnalysisResult {
   description: string;
-  entities?: IEntity[];
+  entities?: Array<IEntity>;
   sentiment?: string;
   usage: IUsageMetrics;
   model: string;
@@ -109,7 +130,7 @@ export interface IAIContext {
   userId?: string;
   characterId?: string;
   gameState?: IGameStateSnapshot;
-  previousInteractions?: IInteraction[];
+  previousInteractions?: Array<IInteraction>;
   preferences?: IUserPreferences;
 }
 
@@ -121,8 +142,8 @@ export interface IGameStateSnapshot {
   characterLevel: number;
   characterClass: string;
   currentQuest?: string;
-  partyMembers?: string[];
-  recentEvents?: string[];
+  partyMembers?: Array<string>;
+  recentEvents?: Array<string>;
   worldState?: IWorldState;
 }
 
@@ -133,7 +154,7 @@ export interface IWorldState {
   timeOfDay: string;
   weather: string;
   season: string;
-  worldEvents: string[];
+  worldEvents: Array<string>;
   factionRelations: Record<string, number>;
 }
 
@@ -155,7 +176,7 @@ export interface IUserPreferences {
   tone: 'serious' | 'humorous' | 'dark' | 'epic' | 'casual';
   detailLevel: 'minimal' | 'normal' | 'detailed' | 'extensive';
   language: string;
-  contentFilters: string[];
+  contentFilters: Array<string>;
   narrativeStyle: 'first-person' | 'third-person' | 'omniscient';
 }
 
@@ -175,7 +196,7 @@ export interface IGenerationConfig {
   topP?: number;
   topK?: number;
   maxOutputTokens?: number;
-  stopSequences?: string[];
+  stopSequences?: Array<string>;
 }
 
 /**
@@ -204,7 +225,7 @@ export interface ICandidate {
   text: string;
   index: number;
   finishReason: string;
-  safetyRatings?: ISafetyRating[];
+  safetyRatings?: Array<ISafetyRating>;
 }
 
 /**

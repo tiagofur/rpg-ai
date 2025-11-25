@@ -1,8 +1,8 @@
-import { IAuthUser, UUID, UserRole, AuthStatus } from '../types';
 import { PrismaClient } from '@prisma/client';
+import { IAuthUser, UUID, UserRole, AuthStatus } from '../types/index.js';
 
 export class UserRepository {
-  private prisma: PrismaClient;
+  private readonly prisma: PrismaClient;
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma;
@@ -11,25 +11,38 @@ export class UserRepository {
   // Método privado para mapear roles de forma segura
   private mapUserRole(role: string): UserRole {
     switch (role) {
-      case 'super_admin': return UserRole.SUPER_ADMIN;
-      case 'admin': return UserRole.ADMIN;
-      case 'moderator': return UserRole.MODERATOR;
-      case 'premium_user': return UserRole.PREMIUM_USER;
-      case 'user': return UserRole.USER;
-      case 'guest': return UserRole.GUEST;
-      default: return UserRole.USER; // Valor por defecto seguro
+      case 'super_admin': { return UserRole.SUPER_ADMIN;
+      }
+      case 'admin': { return UserRole.ADMIN;
+      }
+      case 'moderator': { return UserRole.MODERATOR;
+      }
+      case 'premium_user': { return UserRole.PREMIUM_USER;
+      }
+      case 'user': { return UserRole.USER;
+      }
+      case 'guest': { return UserRole.GUEST;
+      }
+      default: { return UserRole.USER;
+      } // Valor por defecto seguro
     }
   }
 
   // Método privado para mapear estados de forma segura
   private mapAuthStatus(status: string): AuthStatus {
     switch (status) {
-      case 'active': return AuthStatus.ACTIVE;
-      case 'inactive': return AuthStatus.INACTIVE;
-      case 'suspended': return AuthStatus.SUSPENDED;
-      case 'banned': return AuthStatus.BANNED;
-      case 'pending_verification': return AuthStatus.PENDING_VERIFICATION;
-      default: return AuthStatus.INACTIVE; // Valor por defecto seguro
+      case 'active': { return AuthStatus.ACTIVE;
+      }
+      case 'inactive': { return AuthStatus.INACTIVE;
+      }
+      case 'suspended': { return AuthStatus.SUSPENDED;
+      }
+      case 'banned': { return AuthStatus.BANNED;
+      }
+      case 'pending_verification': { return AuthStatus.PENDING_VERIFICATION;
+      }
+      default: { return AuthStatus.INACTIVE;
+      } // Valor por defecto seguro
     }
   }
 
@@ -57,16 +70,16 @@ export class UserRepository {
       if (!user) return null;
 
       return {
-        id: user.id as UUID,
+        id: user.id,
         email: user.email,
         username: user.username,
         role: this.mapUserRole(user.role),
         status: this.mapAuthStatus(user.status),
         mfaEnabled: user.mfaEnabled,
-        mfaSecret: user.mfaSecret || undefined,
-        lastLoginAt: user.lastLoginAt || undefined,
+        mfaSecret: (user.mfaSecret || undefined) as any,
+        lastLoginAt: (user.lastLoginAt || undefined) as any,
         loginAttempts: user.loginAttempts,
-        lockedUntil: user.lockedUntil || undefined,
+        lockedUntil: (user.lockedUntil || undefined) as any,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       };
@@ -80,8 +93,8 @@ export class UserRepository {
     try {
       await this.prisma.user.update({
         where: { id: userId },
-        data: { 
-          role: newRole,
+        data: {
+          role: newRole as any,
           updatedAt: new Date()
         },
       });
@@ -114,16 +127,16 @@ export class UserRepository {
       if (!user) return null;
 
       return {
-        id: user.id as UUID,
+        id: user.id,
         email: user.email,
         username: user.username,
         role: user.role as any,
         status: user.status as any,
         mfaEnabled: user.mfaEnabled,
-        mfaSecret: user.mfaSecret || undefined,
-        lastLoginAt: user.lastLoginAt || undefined,
+        mfaSecret: (user.mfaSecret || undefined) as any,
+        lastLoginAt: (user.lastLoginAt || undefined) as any,
         loginAttempts: user.loginAttempts,
-        lockedUntil: user.lockedUntil || undefined,
+        lockedUntil: (user.lockedUntil || undefined) as any,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       };
@@ -146,8 +159,8 @@ export class UserRepository {
           email: userData.email.toLowerCase(),
           username: userData.username,
           password: userData.password,
-          role: userData.role || 'user',
-          status: userData.status || 'pending_verification',
+          role: (userData.role || 'user') as any,
+          status: (userData.status || 'pending_verification') as any,
           mfaEnabled: false,
           loginAttempts: 0
         },
@@ -168,16 +181,16 @@ export class UserRepository {
       });
 
       return {
-        id: user.id as UUID,
+        id: user.id,
         email: user.email,
         username: user.username,
         role: user.role as any,
         status: user.status as any,
         mfaEnabled: user.mfaEnabled,
-        mfaSecret: user.mfaSecret || undefined,
-        lastLoginAt: user.lastLoginAt || undefined,
+        mfaSecret: (user.mfaSecret || undefined) as any,
+        lastLoginAt: (user.lastLoginAt || undefined) as any,
         loginAttempts: user.loginAttempts,
-        lockedUntil: user.lockedUntil || undefined,
+        lockedUntil: (user.lockedUntil || undefined) as any,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       };
@@ -201,7 +214,7 @@ export class UserRepository {
           loginAttempts: updates.loginAttempts,
           lockedUntil: updates.lockedUntil,
           updatedAt: new Date()
-        },
+        } as any,
         select: {
           id: true,
           email: true,
@@ -219,16 +232,16 @@ export class UserRepository {
       });
 
       return {
-        id: user.id as UUID,
+        id: user.id,
         email: user.email,
         username: user.username,
         role: user.role as any,
         status: user.status as any,
         mfaEnabled: user.mfaEnabled,
-        mfaSecret: user.mfaSecret || undefined,
-        lastLoginAt: user.lastLoginAt || undefined,
+        mfaSecret: (user.mfaSecret || undefined) as any,
+        lastLoginAt: (user.lastLoginAt || undefined) as any,
         loginAttempts: user.loginAttempts,
-        lockedUntil: user.lockedUntil || undefined,
+        lockedUntil: (user.lockedUntil || undefined) as any,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       };
@@ -266,7 +279,7 @@ export class UserRepository {
     }
   }
 
-  async enableMFA(userId: UUID, secret: string, backupCodes: string[]): Promise<void> {
+  async enableMFA(userId: UUID, secret: string, backupCodes: Array<string>): Promise<void> {
     try {
       await this.prisma.user.update({
         where: { id: userId },
