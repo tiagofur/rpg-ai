@@ -286,5 +286,343 @@
       "medium": "Medium",
       "long": "Long"
     }
+  },
+  "bestiary": {
+    "title": "Bestiary",
+    "searchPlaceholder": "Search creatures...",
+    "discovered": "Discovered",
+    "undiscovered": "Undiscovered",
+    "killCount": "{{count}} defeated",
+    "firstEncounter": "First encounter",
+    "lastEncounter": "Last encounter",
+    "noCreatures": "No creatures found",
+    "exploreHint": "Explore the world to discover creatures!",
+    "filterHint": "Try a different filter",
+    "lore": "Lore",
+    "drops": "Drops",
+    "weaknesses": "Weaknesses",
+    "resistances": "Resistances",
+    "immunities": "Immunities",
+    "abilities": "Abilities",
+    "habitat": "Habitat",
+    "stats": {
+      "hp": "HP",
+      "attack": "ATK",
+      "defense": "DEF",
+      "speed": "SPD",
+      "level": "LV"
+    },
+    "rarity": {
+      "common": "Common",
+      "uncommon": "Uncommon",
+      "rare": "Rare",
+      "epic": "Epic",
+      "legendary": "Legendary",
+      "boss": "Boss"
+    },
+    "types": {
+      "beast": "Beast",
+      "undead": "Undead",
+      "demon": "Demon",
+      "dragon": "Dragon",
+      "humanoid": "Humanoid",
+      "elemental": "Elemental",
+      "construct": "Construct",
+      "aberration": "Aberration",
+      "plant": "Plant",
+      "fey": "Fey"
+    },
+    "damage": {
+      "physical": "Physical",
+      "fire": "Fire",
+      "ice": "Ice",
+      "lightning": "Lightning",
+      "poison": "Poison",
+      "dark": "Dark",
+      "holy": "Holy",
+      "arcane": "Arcane"
+    },
+    "rewards": {
+      "xp": "XP Reward",
+      "gold": "Gold Reward"
+    }
+  },
+  "dailies": {
+    "screenTitle": "📅 Dailies",
+    "title": "Daily Challenges",
+    "completed": "completed",
+    "resetIn": "Resets in",
+    "streak": "Daily Streak",
+    "streakMax": "🎉 Max streak! +50% bonus rewards",
+    "streakProgress": "{{days}} days until bonus reward",
+    "bonusReward": "All Dailies Bonus",
+    "todaysChallenges": "Today's Challenges",
+    "claim": "CLAIM",
+    "claimed": "CLAIMED",
+    "rewardClaimed": "Reward Claimed!",
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard",
+      "legendary": "Legendary"
+    },
+    "types": {
+      "combat": "Combat",
+      "exploration": "Exploration",
+      "collection": "Collection",
+      "social": "Social",
+      "survival": "Survival",
+      "speedrun": "Speedrun",
+      "achievement": "Achievement"
+    },
+    "rewards": {
+      "gold": "Gold",
+      "xp": "XP",
+      "item": "Item",
+      "gem": "Gem",
+      "lootbox": "Loot Box"
+    }
+  },
+  "weather": {
+    "forecast": "Weather Forecast",
+    "current": "Current",
+    "upcomingWeather": "Upcoming Weather",
+    "duration": "Duration",
+    "transition": "Transition",
+    "minutes": "min",
+    "effects": "Combat Effects",
+    "types": {
+      "clear": "Clear Skies",
+      "cloudy": "Cloudy",
+      "rain": "Rainy",
+      "storm": "Thunderstorm",
+      "snow": "Snowy",
+      "fog": "Foggy",
+      "heatwave": "Heatwave",
+      "windy": "Windy",
+      "sandstorm": "Sandstorm",
+      "blizzard": "Blizzard"
+    },
+    "intensity": {
+      "light": "Light",
+      "moderate": "Moderate",
+      "heavy": "Heavy"
+    },
+    "descriptions": {
+      "clear": "A beautiful day with perfect visibility.",
+      "cloudy": "Grey clouds cover the sky, blocking the sun.",
+      "rain": "Rain falls steadily, dampening everything.",
+      "storm": "Thunder roars as lightning illuminates the darkness.",
+      "snow": "Snowflakes drift down in peaceful silence.",
+      "fog": "A thick mist reduces visibility significantly.",
+      "heatwave": "The scorching heat drains stamina quickly.",
+      "windy": "Strong winds make ranged attacks difficult.",
+      "sandstorm": "Sand whips through the air, blinding all.",
+      "blizzard": "A fierce snowstorm batters the land."
+    },
+    "effectNames": {
+      "accuracy": "Accuracy",
+      "damage": "Damage",
+      "speed": "Speed",
+      "visibility": "Visibility",
+      "magicPower": "Magic Power",
+      "fireDamage": "Fire Damage",
+      "iceDamage": "Ice Damage",
+      "lightningDamage": "Lightning Damage",
+      "rangedAccuracy": "Ranged Accuracy",
+      "stealth": "Stealth",
+      "movementSpeed": "Movement Speed",
+      "healthRegen": "Health Regen",
+      "fireSpellDamage": "Fire Spell Damage",
+      "maxStamina": "Max Stamina",
+      "criticalChance": "Critical Chance",
+      "earthDamage": "Earth Damage"
+    }
+  },
+  "backstory": {
+    "step": "Step {{current}} of {{total}}",
+    "summaryTitle": "{{name}}'s Story",
+    "yourJourneyBegins": "Your journey begins...",
+    "yourStory": "Your Story",
+    "choicesMade": "Choices Made",
+    "statBonuses": "Stat Bonuses",
+    "startingItems": "Starting Items",
+    "futureEvents": "Future Events",
+    "keyCharacters": "Key Characters",
+    "narrativeTags": "Story Elements",
+    "beginAdventure": "Begin Adventure",
+    "finish": "Finish",
+    "statsBonus": "Stats",
+    "startsWithItem": "Item",
+    "specialEvent": "Event",
+    "recurringNPC": "NPC",
+    "categories": {
+      "origin": "Origins",
+      "motivation": "Motivation",
+      "fear": "Fear",
+      "enemy": "Enemy",
+      "trait": "Personality",
+      "secret": "Secret"
+    },
+    "questions": {
+      "origin": "Where do you come from?",
+      "motivation": "What drives you forward?",
+      "fear": "What do you fear most?",
+      "enemy": "Do you have any enemies?",
+      "trait": "What is your defining trait?",
+      "secret": "Do you have a secret?"
+    },
+    "options": {
+      "origin": {
+        "noble": "I was born into nobility, trained in etiquette and politics.",
+        "commoner": "I grew up in a simple village, learning the ways of honest work.",
+        "orphan": "I never knew my parents. The streets raised me.",
+        "outcast": "My people exiled me. I had to survive alone in the wilderness."
+      },
+      "motivation": {
+        "revenge": "Someone took everything from me. I will find them.",
+        "glory": "I seek fame and fortune. My name will be legendary.",
+        "knowledge": "I hunger for forbidden knowledge and ancient secrets.",
+        "redemption": "I have done terrible things. I seek to make amends."
+      },
+      "fear": {
+        "darkness": "The darkness. What lurks unseen terrifies me.",
+        "failure": "Failure. I cannot bear to disappoint those who believe in me.",
+        "abandonment": "Being alone. I need people around me.",
+        "magic": "Magic. Its power is unnatural and dangerous."
+      },
+      "enemy": {
+        "none": "No, I have lived peacefully until now.",
+        "rival": "A childhood rival who has sworn to destroy me.",
+        "crimeLord": "I owe a debt to a dangerous crime lord.",
+        "cult": "A dark cult hunts me for reasons unknown."
+      },
+      "trait": {
+        "honest": "I always speak the truth, even when it hurts.",
+        "cunning": "I use my wits to outsmart my opponents.",
+        "brave": "I face danger head-on without hesitation.",
+        "compassionate": "I cannot turn away from those in need."
+      },
+      "secret": {
+        "none": "No, my life is an open book.",
+        "power": "I have a dormant power within me I don't understand.",
+        "identity": "I am not who people think I am.",
+        "curse": "A dark curse flows through my veins."
+      }
+    },
+    "stats": {
+      "charisma": "Charisma",
+      "endurance": "Endurance",
+      "perception": "Perception",
+      "survival": "Survival",
+      "strength": "Strength",
+      "intelligence": "Intelligence",
+      "wisdom": "Wisdom",
+      "willpower": "Willpower",
+      "magic_resistance": "Magic Resist",
+      "courage": "Courage",
+      "latent_magic": "Latent Magic"
+    },
+    "items": {
+      "family_signet_ring": "Family Signet Ring",
+      "lucky_coin": "Lucky Coin",
+      "ancient_tome": "Ancient Tome",
+      "debt_note": "Debt Note"
+    },
+    "events": {
+      "discover_true_parents": "Discover your true parents",
+      "confront_nemesis": "Confront your nemesis",
+      "face_past_mistakes": "Face your past mistakes",
+      "overcome_darkness": "Overcome the darkness",
+      "rival_confrontation": "Rival confrontation",
+      "cult_ritual": "Cult ritual",
+      "power_awakening": "Power awakening",
+      "identity_revealed": "Identity revealed",
+      "break_curse": "Break the curse"
+    },
+    "npcs": {
+      "old_enemy_from_tribe": "Old Enemy from Tribe",
+      "sworn_enemy": "Sworn Enemy",
+      "loyal_companion": "Loyal Companion",
+      "childhood_rival": "Childhood Rival",
+      "crime_lord_collector": "Crime Lord's Collector",
+      "cult_assassin": "Cult Assassin",
+      "grateful_villager": "Grateful Villager",
+      "curse_origin": "The Curse's Origin"
+    }
+  },
+  "infinite": {
+    "title": "Infinite Dungeon",
+    "subtitle": "How deep can you go? Procedural dungeons with permanent death await.",
+    "floor": "Floor",
+    "startRun": "Begin Descent",
+    "leaderboard": "Leaderboard",
+    "player": "Player",
+    "score": "Score",
+    "points": "pts",
+    "inventory": "Inventory",
+    "abandon": "Abandon",
+    "bossFloor": "Boss Floor",
+    "minibossFloor": "Mini-Boss",
+    "shopFloor": "Shop Floor",
+    "feature1": "Procedurally generated dungeons with unique challenges",
+    "feature2": "Roguelike permadeath - one life, infinite glory",
+    "feature3": "Global leaderboards - compete with other adventurers",
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard",
+      "nightmare": "Nightmare"
+    },
+    "themes": {
+      "crypt": "Ancient Crypt",
+      "cave": "Dark Caverns",
+      "temple": "Forbidden Temple",
+      "sewer": "Flooded Sewers",
+      "forest": "Cursed Forest",
+      "volcano": "Volcanic Depths",
+      "ice": "Frozen Wastes",
+      "void": "The Void"
+    },
+    "rooms": {
+      "entrance": "Entrance",
+      "combat": "Combat",
+      "treasure": "Treasure",
+      "trap": "Trap",
+      "puzzle": "Puzzle",
+      "rest": "Rest Area",
+      "shop": "Shop",
+      "miniboss": "Mini-Boss",
+      "boss": "Boss",
+      "exit": "Exit"
+    }
+  },
+  "story": {
+    "title": "Story Mode",
+    "subtitle": "An epic adventure awaits",
+    "currentlyPlaying": "Currently Playing",
+    "complete": "Complete",
+    "chapters": "chapters",
+    "playTime": "Play Time",
+    "choices": "Choices",
+    "yourJourney": "Your Journey",
+    "chaptersComingSoon": "Chapters coming soon...",
+    "completePrerequisites": "Complete previous chapters to unlock",
+    "tip": "Story Tip",
+    "tipText": "Your choices shape the narrative. Important decisions will affect the ending and unlock unique paths.",
+    "acts": {
+      "prologue": "Prologue",
+      "act1": "Act I: The Call",
+      "act2": "Act II: The Journey",
+      "act3": "Act III: The Reckoning",
+      "epilogue": "Epilogue"
+    },
+    "actDescriptions": {
+      "prologue": "The awakening of a hero",
+      "act1": "A threat emerges from the shadows",
+      "act2": "Gathering allies and ancient artifacts",
+      "act3": "The final confrontation awaits",
+      "epilogue": "The world after your choices"
+    }
   }
 }

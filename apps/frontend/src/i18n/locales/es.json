@@ -286,5 +286,343 @@
       "medium": "Medio",
       "long": "Largo"
     }
+  },
+  "bestiary": {
+    "title": "Bestiario",
+    "searchPlaceholder": "Buscar criaturas...",
+    "discovered": "Descubierta",
+    "undiscovered": "No descubierta",
+    "killCount": "{{count}} derrotadas",
+    "firstEncounter": "Primer encuentro",
+    "lastEncounter": "Último encuentro",
+    "noCreatures": "No se encontraron criaturas",
+    "exploreHint": "¡Explora el mundo para descubrir criaturas!",
+    "filterHint": "Prueba con otro filtro",
+    "lore": "Historia",
+    "drops": "Botín",
+    "weaknesses": "Debilidades",
+    "resistances": "Resistencias",
+    "immunities": "Inmunidades",
+    "abilities": "Habilidades",
+    "habitat": "Hábitat",
+    "stats": {
+      "hp": "HP",
+      "attack": "ATK",
+      "defense": "DEF",
+      "speed": "VEL",
+      "level": "NV"
+    },
+    "rarity": {
+      "common": "Común",
+      "uncommon": "Poco común",
+      "rare": "Raro",
+      "epic": "Épico",
+      "legendary": "Legendario",
+      "boss": "Jefe"
+    },
+    "types": {
+      "beast": "Bestia",
+      "undead": "No-muerto",
+      "demon": "Demonio",
+      "dragon": "Dragón",
+      "humanoid": "Humanoide",
+      "elemental": "Elemental",
+      "construct": "Constructo",
+      "aberration": "Aberración",
+      "plant": "Planta",
+      "fey": "Feérico"
+    },
+    "damage": {
+      "physical": "Físico",
+      "fire": "Fuego",
+      "ice": "Hielo",
+      "lightning": "Rayo",
+      "poison": "Veneno",
+      "dark": "Oscuro",
+      "holy": "Sagrado",
+      "arcane": "Arcano"
+    },
+    "rewards": {
+      "xp": "Recompensa XP",
+      "gold": "Recompensa Oro"
+    }
+  },
+  "dailies": {
+    "screenTitle": "📅 Diarios",
+    "title": "Desafíos Diarios",
+    "completed": "completados",
+    "resetIn": "Se reinicia en",
+    "streak": "Racha Diaria",
+    "streakMax": "🎉 ¡Racha máxima! +50% recompensas extra",
+    "streakProgress": "{{days}} días para recompensa bonus",
+    "bonusReward": "Bonus por Completar Todo",
+    "todaysChallenges": "Desafíos de Hoy",
+    "claim": "RECLAMAR",
+    "claimed": "RECLAMADO",
+    "rewardClaimed": "¡Recompensa Obtenida!",
+    "difficulty": {
+      "easy": "Fácil",
+      "medium": "Medio",
+      "hard": "Difícil",
+      "legendary": "Legendario"
+    },
+    "types": {
+      "combat": "Combate",
+      "exploration": "Exploración",
+      "collection": "Recolección",
+      "social": "Social",
+      "survival": "Supervivencia",
+      "speedrun": "Contrarreloj",
+      "achievement": "Logro"
+    },
+    "rewards": {
+      "gold": "Oro",
+      "xp": "XP",
+      "item": "Item",
+      "gem": "Gema",
+      "lootbox": "Cofre"
+    }
+  },
+  "weather": {
+    "forecast": "Pronóstico del Clima",
+    "current": "Actual",
+    "upcomingWeather": "Próximo Clima",
+    "duration": "Duración",
+    "transition": "Transición",
+    "minutes": "min",
+    "effects": "Efectos en Combate",
+    "types": {
+      "clear": "Cielo Despejado",
+      "cloudy": "Nublado",
+      "rain": "Lluvia",
+      "storm": "Tormenta",
+      "snow": "Nieve",
+      "fog": "Niebla",
+      "heatwave": "Ola de Calor",
+      "windy": "Ventoso",
+      "sandstorm": "Tormenta de Arena",
+      "blizzard": "Ventisca"
+    },
+    "intensity": {
+      "light": "Ligero",
+      "moderate": "Moderado",
+      "heavy": "Intenso"
+    },
+    "descriptions": {
+      "clear": "Un día hermoso con visibilidad perfecta.",
+      "cloudy": "Nubes grises cubren el cielo, bloqueando el sol.",
+      "rain": "La lluvia cae constantemente, mojándolo todo.",
+      "storm": "Los truenos rugen mientras los relámpagos iluminan la oscuridad.",
+      "snow": "Los copos de nieve caen en silencio pacífico.",
+      "fog": "Una espesa niebla reduce significativamente la visibilidad.",
+      "heatwave": "El calor abrasador drena la resistencia rápidamente.",
+      "windy": "Los fuertes vientos dificultan los ataques a distancia.",
+      "sandstorm": "La arena azota el aire, cegando a todos.",
+      "blizzard": "Una feroz tormenta de nieve azota la tierra."
+    },
+    "effectNames": {
+      "accuracy": "Precisión",
+      "damage": "Daño",
+      "speed": "Velocidad",
+      "visibility": "Visibilidad",
+      "magicPower": "Poder Mágico",
+      "fireDamage": "Daño de Fuego",
+      "iceDamage": "Daño de Hielo",
+      "lightningDamage": "Daño de Rayo",
+      "rangedAccuracy": "Precisión a Distancia",
+      "stealth": "Sigilo",
+      "movementSpeed": "Velocidad de Movimiento",
+      "healthRegen": "Regeneración de Vida",
+      "fireSpellDamage": "Daño de Hechizo de Fuego",
+      "maxStamina": "Resistencia Máxima",
+      "criticalChance": "Probabilidad Crítica",
+      "earthDamage": "Daño de Tierra"
+    }
+  },
+  "backstory": {
+    "step": "Paso {{current}} de {{total}}",
+    "summaryTitle": "Historia de {{name}}",
+    "yourJourneyBegins": "Tu aventura comienza...",
+    "yourStory": "Tu Historia",
+    "choicesMade": "Decisiones Tomadas",
+    "statBonuses": "Bonificaciones de Stats",
+    "startingItems": "Objetos Iniciales",
+    "futureEvents": "Eventos Futuros",
+    "keyCharacters": "Personajes Clave",
+    "narrativeTags": "Elementos de la Historia",
+    "beginAdventure": "Comenzar Aventura",
+    "finish": "Finalizar",
+    "statsBonus": "Stats",
+    "startsWithItem": "Objeto",
+    "specialEvent": "Evento",
+    "recurringNPC": "PNJ",
+    "categories": {
+      "origin": "Orígenes",
+      "motivation": "Motivación",
+      "fear": "Temor",
+      "enemy": "Enemigo",
+      "trait": "Personalidad",
+      "secret": "Secreto"
+    },
+    "questions": {
+      "origin": "¿De dónde vienes?",
+      "motivation": "¿Qué te impulsa a seguir adelante?",
+      "fear": "¿Qué es lo que más temes?",
+      "enemy": "¿Tienes algún enemigo?",
+      "trait": "¿Cuál es tu rasgo más distintivo?",
+      "secret": "¿Guardas algún secreto?"
+    },
+    "options": {
+      "origin": {
+        "noble": "Nací en la nobleza, educado en etiqueta y política.",
+        "commoner": "Crecí en una aldea humilde, aprendiendo el valor del trabajo honesto.",
+        "orphan": "Nunca conocí a mis padres. Las calles me criaron.",
+        "outcast": "Mi pueblo me exilió. Tuve que sobrevivir solo en la naturaleza."
+      },
+      "motivation": {
+        "revenge": "Alguien me quitó todo. Los encontraré.",
+        "glory": "Busco fama y fortuna. Mi nombre será legendario.",
+        "knowledge": "Anhelo conocimiento prohibido y secretos ancestrales.",
+        "redemption": "He hecho cosas terribles. Busco redimirme."
+      },
+      "fear": {
+        "darkness": "La oscuridad. Lo que acecha sin ser visto me aterra.",
+        "failure": "Fracasar. No puedo soportar decepcionar a quienes confían en mí.",
+        "abandonment": "Estar solo. Necesito gente a mi alrededor.",
+        "magic": "La magia. Su poder es antinatural y peligroso."
+      },
+      "enemy": {
+        "none": "No, he vivido en paz hasta ahora.",
+        "rival": "Un rival de la infancia que ha jurado destruirme.",
+        "crimeLord": "Tengo una deuda con un peligroso señor del crimen.",
+        "cult": "Un culto oscuro me persigue por razones desconocidas."
+      },
+      "trait": {
+        "honest": "Siempre digo la verdad, aunque duela.",
+        "cunning": "Uso mi astucia para superar a mis oponentes.",
+        "brave": "Enfrento el peligro de frente sin dudar.",
+        "compassionate": "No puedo ignorar a quienes necesitan ayuda."
+      },
+      "secret": {
+        "none": "No, mi vida es un libro abierto.",
+        "power": "Tengo un poder dormido dentro de mí que no entiendo.",
+        "identity": "No soy quien la gente cree que soy.",
+        "curse": "Una maldición oscura corre por mis venas."
+      }
+    },
+    "stats": {
+      "charisma": "Carisma",
+      "endurance": "Resistencia",
+      "perception": "Percepción",
+      "survival": "Supervivencia",
+      "strength": "Fuerza",
+      "intelligence": "Inteligencia",
+      "wisdom": "Sabiduría",
+      "willpower": "Voluntad",
+      "magic_resistance": "Resist. Mágica",
+      "courage": "Valentía",
+      "latent_magic": "Magia Latente"
+    },
+    "items": {
+      "family_signet_ring": "Anillo del Sello Familiar",
+      "lucky_coin": "Moneda de la Suerte",
+      "ancient_tome": "Tomo Antiguo",
+      "debt_note": "Nota de Deuda"
+    },
+    "events": {
+      "discover_true_parents": "Descubrir a tus verdaderos padres",
+      "confront_nemesis": "Enfrentar a tu némesis",
+      "face_past_mistakes": "Enfrentar tus errores pasados",
+      "overcome_darkness": "Superar la oscuridad",
+      "rival_confrontation": "Confrontación con el rival",
+      "cult_ritual": "Ritual del culto",
+      "power_awakening": "Despertar del poder",
+      "identity_revealed": "Identidad revelada",
+      "break_curse": "Romper la maldición"
+    },
+    "npcs": {
+      "old_enemy_from_tribe": "Antiguo Enemigo de la Tribu",
+      "sworn_enemy": "Enemigo Jurado",
+      "loyal_companion": "Compañero Leal",
+      "childhood_rival": "Rival de la Infancia",
+      "crime_lord_collector": "Cobrador del Señor del Crimen",
+      "cult_assassin": "Asesino del Culto",
+      "grateful_villager": "Aldeano Agradecido",
+      "curse_origin": "El Origen de la Maldición"
+    }
+  },
+  "infinite": {
+    "title": "Mazmorra Infinita",
+    "subtitle": "¿Qué tan profundo puedes llegar? Mazmorras procedurales con muerte permanente te esperan.",
+    "floor": "Piso",
+    "startRun": "Iniciar Descenso",
+    "leaderboard": "Clasificación",
+    "player": "Jugador",
+    "score": "Puntos",
+    "points": "pts",
+    "inventory": "Inventario",
+    "abandon": "Abandonar",
+    "bossFloor": "Piso del Jefe",
+    "minibossFloor": "Mini-Jefe",
+    "shopFloor": "Piso de Tienda",
+    "feature1": "Mazmorras generadas proceduralmente con desafíos únicos",
+    "feature2": "Permadeath roguelike - una vida, gloria infinita",
+    "feature3": "Clasificaciones globales - compite con otros aventureros",
+    "difficulty": {
+      "easy": "Fácil",
+      "medium": "Media",
+      "hard": "Difícil",
+      "nightmare": "Pesadilla"
+    },
+    "themes": {
+      "crypt": "Cripta Antigua",
+      "cave": "Cavernas Oscuras",
+      "temple": "Templo Prohibido",
+      "sewer": "Alcantarillas Inundadas",
+      "forest": "Bosque Maldito",
+      "volcano": "Profundidades Volcánicas",
+      "ice": "Páramos Helados",
+      "void": "El Vacío"
+    },
+    "rooms": {
+      "entrance": "Entrada",
+      "combat": "Combate",
+      "treasure": "Tesoro",
+      "trap": "Trampa",
+      "puzzle": "Acertijo",
+      "rest": "Área de Descanso",
+      "shop": "Tienda",
+      "miniboss": "Mini-Jefe",
+      "boss": "Jefe",
+      "exit": "Salida"
+    }
+  },
+  "story": {
+    "title": "Modo Historia",
+    "subtitle": "Una aventura épica te espera",
+    "currentlyPlaying": "Jugando Actualmente",
+    "complete": "Completado",
+    "chapters": "capítulos",
+    "playTime": "Tiempo de Juego",
+    "choices": "Decisiones",
+    "yourJourney": "Tu Travesía",
+    "chaptersComingSoon": "Capítulos próximamente...",
+    "completePrerequisites": "Completa los capítulos anteriores para desbloquear",
+    "tip": "Consejo de Historia",
+    "tipText": "Tus decisiones moldean la narrativa. Las decisiones importantes afectarán el final y desbloquearán caminos únicos.",
+    "acts": {
+      "prologue": "Prólogo",
+      "act1": "Acto I: La Llamada",
+      "act2": "Acto II: El Viaje",
+      "act3": "Acto III: El Ajuste de Cuentas",
+      "epilogue": "Epílogo"
+    },
+    "actDescriptions": {
+      "prologue": "El despertar de un héroe",
+      "act1": "Una amenaza emerge de las sombras",
+      "act2": "Reuniendo aliados y artefactos ancestrales",
+      "act3": "La confrontación final aguarda",
+      "epilogue": "El mundo después de tus decisiones"
+    }
   }
 }

@@ -75,13 +75,18 @@ Contiene:
   - M3: Combate por Turnos ✅
   - M4: Loot de Enemigos ✅
 - 🟡 5 Mejoras Importantes (mejoran engagement)
-  - M5: Diálogos con NPCs
-  - M6: Sistema de Magia en UI
-  - M7: Equipar Items desde UI
-  - M8: Progresión al Subir Nivel
-  - M9: Mini-mapa Visual
+  - M5: Diálogos con NPCs ✅
+  - M6: Sistema de Magia en UI ✅
+  - M7: Equipar Items desde UI ✅
+  - M8: Progresión al Subir Nivel ✅
+  - M9: Mini-mapa Visual ✅
 - 🟢 6 Mejoras Deseables (polish y adicción)
-  - M10-M15: Modo Historia, Infinito, Dailies, etc.
+  - M10: Modo Historia Principal
+  - M11: Modo Infinito
+  - M12: Dailies ✅
+  - M13: Backstory Generator
+  - M14: Bestiario ✅
+  - M15: Clima Dinámico
 - Especificaciones técnicas detalladas
 - Mockups de UI
 - Plan de implementación por sprints
@@ -123,11 +128,15 @@ Contiene:
 | Level Up Modal        | ✅ Implementado | ⭐⭐⭐⭐ (4/5) |
 | UI de Equipamiento    | ✅ Implementado | ⭐⭐⭐⭐ (4/5) |
 | Mini-mapa Visual      | ✅ Implementado | ⭐⭐⭐⭐ (4/5) |
+| Diálogos NPCs         | ✅ Implementado | ⭐⭐⭐⭐ (4/5) |
+| Sistema de Magia UI   | ✅ Implementado | ⭐⭐⭐⭐ (4/5) |
+| Bestiario             | ✅ Implementado | ⭐⭐⭐⭐ (4/5) |
+| Daily Challenges      | ✅ Implementado | ⭐⭐⭐⭐ (4/5) |
 
 ### Diagnóstico Principal
 
-> **¡Sprint M7+M9 completado! Tenemos: EquipmentScreen con paperdoll visual, MiniMap con nodos conectados y fog of war.
-> El frontend está listo para integración E2E con el backend.**
+> **¡Sprint M12+M14 completado! Tenemos: BestiaryScreen con criaturas y drops, DailiesScreen con challenges diarios,
+> streaks y bonus rewards. ¡El juego tiene sistemas de retención y enganche a largo plazo!**
 
 ### Prioridades Inmediatas
 
@@ -138,8 +147,13 @@ Contiene:
 5. ~~**Frontend de Combate**~~ ✅ Completado - Componentes UI para el sistema de combate
 6. ~~**UI de Equipamiento**~~ ✅ Completado - Paperdoll y gestión de equipo
 7. ~~**Mini-mapa Visual**~~ ✅ Completado - Mapa interactivo con conexiones
-8. **Integración E2E** - Probar flujo completo entre frontend y backend
-9. **Diálogos con NPCs** - Sistema de conversaciones (M5)
+8. ~~**Diálogos con NPCs**~~ ✅ Completado - Sistema de conversaciones con emociones
+9. ~~**Sistema de Magia UI**~~ ✅ Completado - Grimorio con escuelas y hechizos
+10. ~~**Bestiario**~~ ✅ Completado - Colección de criaturas con drops y debilidades
+11. ~~**Daily Challenges**~~ ✅ Completado - Sistema de desafíos diarios con streaks
+12. ~~**Bestiario**~~ ✅ Completado - Colección de criaturas con drops y debilidades
+13. **Integración E2E** - Probar flujo completo entre frontend y backend
+14. **Contenido** - Campaña principal, modo infinito, dailies
 
 ---
 
@@ -162,8 +176,9 @@ Semana 2-3: Combate por Turnos                   ✅ COMPLETADO
 Semana 3-4: Arco Narrativo + Diálogos NPCs       ✅ COMPLETADO (backend)
 Semana 4-5: Frontend de Combate + Progresión     ✅ COMPLETADO
 Semana 5-6: UI de Equipamiento + Mini-mapa       ✅ COMPLETADO
-Semana 6-7: Diálogos NPCs + Sistema de Magia UI  🔄 PRÓXIMO
-Semana 7+:  Contenido (Campaña, Modo Infinito)
+Semana 6-7: Diálogos NPCs + Sistema de Magia UI  ✅ COMPLETADO
+Semana 7-8: Bestiario + Polish                   ✅ COMPLETADO
+Semana 8+:  Contenido (Campaña, Modo Infinito)   🔄 PRÓXIMO
 ```
 
 ---
@@ -201,17 +216,21 @@ Semana 7+:  Contenido (Campaña, Modo Infinito)
 
 ## 🔄 Historial de Cambios
 
-| Fecha      | Cambio                                                                 |
-| ---------- | ---------------------------------------------------------------------- |
-| 2025-11-26 | Creación inicial de documentación de diseño                            |
-| 2025-11-26 | ✅ M1: Sistema de Misiones implementado                                |
-| 2025-11-26 | ✅ M4: Sistema de Loot implementado                                    |
-| 2025-11-26 | ✅ M3: Sistema de Combate por Turnos                                   |
-| 2025-11-26 | ✅ M2: Sistema de Arco Narrativo implementado                          |
-| 2025-11-26 | ✅ Frontend de Combate: CombatUI, TurnOrder, EnemyPanel, VictoryScreen |
-| 2025-11-26 | ✅ M8: LevelUpModal con distribución de atributos                      |
-| 2025-11-26 | ✅ M7: EquipmentScreen con paperdoll visual y gestión de slots         |
-| 2025-11-26 | ✅ M9: MiniMap con nodos conectados y fog of war                       |
+| Fecha      | Cambio                                                                  |
+| ---------- | ----------------------------------------------------------------------- |
+| 2025-11-26 | Creación inicial de documentación de diseño                             |
+| 2025-11-26 | ✅ M1: Sistema de Misiones implementado                                 |
+| 2025-11-26 | ✅ M4: Sistema de Loot implementado                                     |
+| 2025-11-26 | ✅ M3: Sistema de Combate por Turnos                                    |
+| 2025-11-26 | ✅ M2: Sistema de Arco Narrativo implementado                           |
+| 2025-11-26 | ✅ Frontend de Combate: CombatUI, TurnOrder, EnemyPanel, VictoryScreen  |
+| 2025-11-26 | ✅ M8: LevelUpModal con distribución de atributos                       |
+| 2025-11-26 | ✅ M7: EquipmentScreen con paperdoll visual y gestión de slots          |
+| 2025-11-26 | ✅ M9: MiniMap con nodos conectados y fog of war                        |
+| 2025-11-26 | ✅ M5: DialogueScreen con NPCs, emociones y opciones de respuesta       |
+| 2025-11-26 | ✅ M6: SpellScreen con grimorio, escuelas de magia y barra de maná      |
+| 2025-11-26 | ✅ M14: BestiaryScreen con criaturas, drops y sistema de descubrimiento |
+| 2025-11-26 | ✅ M12: DailiesScreen con challenges diarios, streaks y bonus rewards   |
 
 ---
 
