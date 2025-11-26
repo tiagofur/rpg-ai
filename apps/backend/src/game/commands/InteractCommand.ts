@@ -205,7 +205,8 @@ export class InteractCommand extends BaseGameCommand {
       timestamp: new Date().toISOString(),
       level: LogLevel.INFO,
       category: 'command',
-      message: `Used ${parameters.interactionType} interaction on ${target.name}`,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      message: `Used ${parameters.interactionType} interaction on ${(target as any).name}`,
       data: {
         interactionType: parameters.interactionType,
         targetId: target.id,
@@ -324,27 +325,25 @@ export class InteractCommand extends BaseGameCommand {
   // eslint-disable-next-line class-methods-use-this
   private findTarget(context: IGameContext, targetId: string): IGameEntity | undefined {
     // Buscar en las entidades del estado del juego
-    if (context.gameState && context.gameState.entities) {
+    if (context.gameState?.entities) {
       const entity = context.gameState.entities[targetId];
-      if (entity) {
+      if (entity && context.location) {
         // Check if entity is at the same location as character
         // This is a bit tricky because entities map contains ALL entities.
         // We should check if the entity is in the current location's characters or objects list.
-        // But for now, let's assume if we have the ID and it's in entities, we can interact if it's close enough (logic to be added if needed).
         // Actually, GameEngine puts entities in location.characters or location.objects.
         // We can check context.location.characters or context.location.objects.
 
-        if (context.location) {
-          const inLocation = context.location.characters.includes(targetId) ||
-            context.location.objects.some(obj => obj.id === targetId);
+        // characters is an array of string IDs, so includes(targetId) works correctly
+        const inLocation = (context.location.characters as unknown as Array<string>).includes(targetId) ||
+          context.location.objects.some(obj => obj.id === targetId);
 
-          if (inLocation) {
-            // Return the entity wrapper, but InteractCommand expects the data inside usually?
-            // The original code returned 'entity' from getEntitiesAtLocation which likely returned the data object or the wrapper.
-            // InteractCommand casts it to 'any' and accesses properties like 'health', 'interactable'.
-            // So it expects the data object.
-            return entity.data as unknown as IGameEntity; // Cast to IGameEntity but it's actually the data object (ICharacter or IGameObject)
-          }
+        if (inLocation) {
+          // Return the entity wrapper, but InteractCommand expects the data inside usually?
+          // The original code returned 'entity' from getEntitiesAtLocation which likely returned the data object or the wrapper.
+          // InteractCommand casts it to 'any' and accesses properties like 'health', 'interactable'.
+          // So it expects the data object.
+          return entity.data as unknown as IGameEntity; // Cast to IGameEntity but it's actually the data object (ICharacter or IGameObject)
         }
       }
     }

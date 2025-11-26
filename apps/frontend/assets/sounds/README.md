@@ -4,12 +4,41 @@ Coloca tus efectos de sonido aquí (formato .mp3 o .ogg)
 
 ## 📋 Archivos Necesarios (Prioridad Alta)
 
+### Efectos de Sonido (SFX)
+
 - `click.mp3` - Click en botones
 - `attack.mp3` - Ataque normal
 - `hit.mp3` - Golpe exitoso
 - `levelup.mp3` - Subida de nivel
 - `death.mp3` - Muerte
 - `success.mp3` - Acción exitosa
+
+### Música Ambiental (BGM)
+
+- `ambient_exploration.mp3` - Música de exploración (30-60s, loop)
+- `ambient_combat.mp3` - Música de combate (30-60s, loop)
+
+## 🎮 Uso en el Código
+
+### Efectos de Sonido
+
+```typescript
+import { useGameEffects } from '../hooks/useGameEffects';
+
+const { playSound, playHaptic } = useGameEffects();
+await playSound('attack');
+```
+
+### Música Ambiental
+
+```typescript
+import { useBackgroundMusic } from '../hooks/useBackgroundMusic';
+
+const { playTrack, stopMusic } = useBackgroundMusic();
+await playTrack('exploration'); // Fade in exploration music
+await playTrack('combat'); // Crossfade to combat music
+await stopMusic(); // Fade out
+```
 
 ## 🌐 Fuentes Recomendadas (Libres de Derechos)
 

@@ -6,7 +6,9 @@
     "exit": "Salir",
     "send": "Enviar",
     "undo": "Deshacer",
-    "success": "Éxito"
+    "success": "Éxito",
+    "continue": "Continuar",
+    "confirm": "Confirmar"
   },
   "game": {
     "session": "Sesión",
@@ -29,6 +31,29 @@
     "quickMove": "Mover",
     "quickDefend": "Defender"
   },
+  "combat": {
+    "attack": "Atacar",
+    "defend": "Defender",
+    "magic": "Magia",
+    "items": "Items",
+    "flee": "Huir",
+    "yourTurn": "TU TURNO",
+    "enemyTurn": "Turno del enemigo...",
+    "chooseAction": "Elige una acción",
+    "rounds": "{{count}} rondas",
+    "rewards": "Recompensas",
+    "itemsObtained": "Items obtenidos:",
+    "victory": "VICTORIA",
+    "defeat": "DERROTA",
+    "fled": "Escapaste"
+  },
+  "levelup": {
+    "bonuses": "Bonificaciones",
+    "newAbility": "Nueva Habilidad",
+    "attributePoints": "Puntos de Atributo",
+    "distributePoints": "Distribuir {{count}} puntos",
+    "decideLater": "Decidir después"
+  },
   "character": {
     "title": "Hoja de Personaje",
     "level": "Nivel",
@@ -47,6 +72,36 @@
     "title": "Inventario",
     "empty": "Tu inventario está vacío."
   },
+  "equipment": {
+    "title": "Equipamiento",
+    "gear": "Equipo",
+    "statsWithGear": "Stats con Equipo",
+    "attack": "ATK",
+    "defense": "DEF",
+    "health": "HP",
+    "mana": "MP",
+    "selectFor": "Seleccionar item para",
+    "equip": "Equipar",
+    "unequip": "Desequipar",
+    "noItems": "No hay items equipables disponibles",
+    "unknownItem": "Un item misterioso con propiedades desconocidas.",
+    "value": "Valor",
+    "gold": "oro"
+  },
+  "map": {
+    "current": "Estás aquí",
+    "visited": "Explorado",
+    "unexplored": "Desconocido",
+    "dangerLevel": "Peligro",
+    "travelTo": "Viajar Aquí",
+    "danger": {
+      "safe": "Seguro",
+      "low": "Bajo",
+      "medium": "Medio",
+      "high": "Alto",
+      "deadly": "Mortal"
+    }
+  },
   "subscription": {
     "title": "Suscripciones",
     "chooseDestiny": "Elige tu destino",
@@ -54,10 +109,182 @@
     "processing": "Procesando...",
     "active": "ACTIVO",
     "month": "mes",
+    "tier": "Nivel",
+    "upgrade": "Mejorar Ahora",
     "success": "Suscripción Exitosa",
     "successMessage": "¡Bienvenido al club premium!",
     "errorMessage": "Algo salió mal. Por favor intenta de nuevo.",
     "enterCardDetails": "Por favor ingresa detalles de tarjeta válidos.",
     "paymentDetails": "Detalles de Pago"
+  },
+  "paywall": {
+    "title": {
+      "aiLimit": "¡Sin Poder de IA!",
+      "imageLimit": "¡Sin Créditos de Imagen!",
+      "saveLimit": "¡Guardados Llenos!",
+      "characterLimit": "¡Límite de Personajes!",
+      "premium": "Desbloquea Contenido Premium",
+      "locked": "Función Bloqueada",
+      "upsell": "¿Disfrutando la Aventura?",
+      "milestone": "¡Gran Progreso! ¿Subir de Nivel?",
+      "default": "Mejora Tu Aventura"
+    },
+    "subtitle": {
+      "aiLimit": "Has usado todas tus peticiones de IA este mes. ¡Mejora para continuar tu historia!",
+      "imageLimit": "Desbloquea imágenes ilimitadas generadas por IA para tus aventuras.",
+      "saveLimit": "Necesitas más espacios para guardar esta aventura. ¡Mejora ahora!",
+      "characterLimit": "Crea más héroes y villanos para tus historias.",
+      "premium": "Este contenido exclusivo está disponible para miembros premium.",
+      "locked": "Desbloquea esta función y muchas más con una suscripción.",
+      "upsell": "¡Lleva tus aventuras al siguiente nivel con funciones premium!",
+      "milestone": "¡Has progresado increíblemente! ¿Listo para aventuras aún más épicas?",
+      "default": "Elige un plan que se adapte a tu estilo de aventura."
+    },
+    "monthly": "Mensual",
+    "yearly": "Anual",
+    "save": "Ahorra",
+    "mo": "mes",
+    "year": "año",
+    "select": "Elegir",
+    "secure": "Pago seguro con Stripe",
+    "cancel": "Cancela cuando quieras, sin preguntas"
+  },
+  "usage": {
+    "nearLimit": "Cerca del límite"
+  },
+  "connection": {
+    "connected": "Conectado",
+    "connecting": "Conectando...",
+    "disconnected": "Desconectado",
+    "error": "Error de Conexión",
+    "online": "En línea",
+    "offline": "Sin conexión",
+    "sync": "Sincronizando",
+    "unknown": "Desconocido",
+    "tapRetry": "Toca para reintentar",
+    "waitingServer": "Esperando servidor..."
+  },
+  "settings": {
+    "title": "Ajustes",
+    "sections": {
+      "game": "Juego",
+      "notifications": "Notificaciones",
+      "account": "Cuenta",
+      "support": "Soporte y Legal",
+      "about": "Acerca de",
+      "dangerZone": "Zona de Peligro"
+    },
+    "sound": {
+      "label": "Efectos de Sonido",
+      "description": "Sonidos y efectos del juego"
+    },
+    "music": {
+      "label": "Música de Fondo",
+      "description": "Música ambiental durante el juego"
+    },
+    "haptics": {
+      "label": "Retroalimentación Háptica",
+      "description": "Vibración en acciones"
+    },
+    "notifications": {
+      "label": "Notificaciones Push",
+      "description": "Recibe actualizaciones y alertas"
+    },
+    "subscription": {
+      "label": "Suscripción",
+      "description": "Administra tu plan"
+    },
+    "language": {
+      "label": "Idioma",
+      "title": "Elegir Idioma"
+    },
+    "support": {
+      "label": "Contactar Soporte"
+    },
+    "privacy": {
+      "label": "Política de Privacidad"
+    },
+    "terms": {
+      "label": "Términos de Servicio"
+    },
+    "version": {
+      "label": "Versión"
+    },
+    "logout": {
+      "label": "Cerrar Sesión",
+      "title": "Cerrar Sesión",
+      "message": "¿Estás seguro de que quieres cerrar sesión?",
+      "confirm": "Cerrar Sesión"
+    },
+    "deleteAccount": {
+      "label": "Eliminar Cuenta",
+      "title": "Eliminar Cuenta",
+      "message": "Esta acción es permanente y no se puede deshacer. Todos tus datos, personajes y progreso se perderán.",
+      "confirm": "Eliminar para Siempre",
+      "contactSupport": "Por favor contacta a soporte para eliminar tu cuenta."
+    }
+  },
+  "dialogue": {
+    "continue": "Toca para continuar",
+    "skipAnimation": "Toca para saltar",
+    "requirementNotMet": "Requisito no cumplido",
+    "optionLocked": "Esta opción está bloqueada",
+    "endConversation": "Terminar conversación",
+    "speaking": "Hablando...",
+    "emotions": {
+      "neutral": "Neutral",
+      "happy": "Feliz",
+      "sad": "Triste",
+      "angry": "Enfadado",
+      "surprised": "Sorprendido",
+      "scared": "Asustado",
+      "thinking": "Pensativo",
+      "suspicious": "Sospechoso"
+    },
+    "requirements": {
+      "stat": "Requiere {{stat}} {{min}}+",
+      "item": "Requiere: {{item}}",
+      "quest": "Requiere misión: {{quest}}",
+      "gold": "Requiere {{gold}} oro",
+      "reputation": "Requiere reputación {{faction}} {{min}}+",
+      "level": "Requiere nivel {{level}}+"
+    }
+  },
+  "magic": {
+    "spellbook": "Grimorio",
+    "spellsLearned": "{{count}} hechizos aprendidos",
+    "noSpells": "Sin hechizos aprendidos",
+    "noSpellsHint": "Aprende hechizos subiendo de nivel o encontrando tomos mágicos",
+    "selectSpell": "Selecciona un hechizo para lanzar",
+    "inCombat": "Selecciona un hechizo para lanzar en combate",
+    "notEnoughMana": "Maná insuficiente",
+    "onCooldown": "En recarga ({{turns}} turnos)",
+    "spellNotLearned": "Hechizo no aprendido",
+    "ready": "Listo",
+    "cast": "Lanzar",
+    "schools": {
+      "all": "Todos",
+      "fire": "Fuego",
+      "ice": "Hielo",
+      "lightning": "Rayo",
+      "earth": "Tierra",
+      "light": "Luz",
+      "dark": "Oscuridad",
+      "arcane": "Arcano",
+      "nature": "Naturaleza"
+    },
+    "stats": {
+      "damage": "DAÑO",
+      "healing": "CURAR",
+      "range": "Alcance",
+      "cooldown": "CD",
+      "manaCost": "PM"
+    },
+    "ranges": {
+      "melee": "Cuerpo a cuerpo",
+      "short": "Corto",
+      "medium": "Medio",
+      "long": "Largo"
+    }
   }
 }

@@ -640,7 +640,11 @@ export enum CommandType {
   ANALYZE_IMAGE = 'analyze_image',
   RESPAWN = 'respawn',
   CUSTOM = 'custom',
-  SYSTEM = 'system'
+  SYSTEM = 'system',
+  // Combat system commands
+  START_COMBAT = 'start_combat',
+  COMBAT_ACTION = 'combat_action',
+  END_COMBAT = 'end_combat'
 }
 
 /**

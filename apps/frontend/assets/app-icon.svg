@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- RPG-AI Supreme App Icon - 1024x1024 -->
+<!-- Export as PNG at 1024x1024 for app stores -->
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a1a;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#050510;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0a0a1a;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f7cf46;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#ffd700;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#b8982f;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="16" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- iOS corner mask -->
+    <clipPath id="iosCorners">
+      <rect x="0" y="0" width="1024" height="1024" rx="180" ry="180"/>
+    </clipPath>
+  </defs>
+  
+  <!-- Background with rounded corners for iOS -->
+  <g clip-path="url(#iosCorners)">
+    <rect width="1024" height="1024" fill="url(#bgGradient)"/>
+    
+    <!-- Subtle grid pattern -->
+    <g opacity="0.05" stroke="#f7cf46" stroke-width="1">
+      <line x1="256" y1="0" x2="256" y2="1024"/>
+      <line x1="512" y1="0" x2="512" y2="1024"/>
+      <line x1="768" y1="0" x2="768" y2="1024"/>
+      <line x1="0" y1="256" x2="1024" y2="256"/>
+      <line x1="0" y1="512" x2="1024" y2="512"/>
+      <line x1="0" y1="768" x2="1024" y2="768"/>
+    </g>
+    
+    <!-- D20 Shape - Main Visual -->
+    <g filter="url(#glow)" transform="translate(512, 480)">
+      <!-- Outer triangle -->
+      <polygon 
+        points="0,-280 243,140 -243,140" 
+        fill="none" 
+        stroke="url(#goldGradient)" 
+        stroke-width="12"
+      />
+      
+      <!-- Inner structure lines -->
+      <line x1="0" y1="-280" x2="0" y2="140" stroke="url(#goldGradient)" stroke-width="6" opacity="0.6"/>
+      <line x1="-243" y1="140" x2="122" y2="-70" stroke="url(#goldGradient)" stroke-width="6" opacity="0.6"/>
+      <line x1="243" y1="140" x2="-122" y2="-70" stroke="url(#goldGradient)" stroke-width="6" opacity="0.6"/>
+      
+      <!-- AI nodes -->
+      <circle cx="0" cy="-40" r="40" fill="url(#goldGradient)"/>
+      <circle cx="0" cy="-180" r="24" fill="url(#goldGradient)" opacity="0.8"/>
+      <circle cx="-140" cy="80" r="24" fill="url(#goldGradient)" opacity="0.8"/>
+      <circle cx="140" cy="80" r="24" fill="url(#goldGradient)" opacity="0.8"/>
+      
+      <!-- Neural connections -->
+      <line x1="0" y1="-80" x2="0" y2="-156" stroke="url(#goldGradient)" stroke-width="5" opacity="0.6"/>
+      <line x1="-28" y1="-20" x2="-116" y2="64" stroke="url(#goldGradient)" stroke-width="5" opacity="0.6"/>
+      <line x1="28" y1="-20" x2="116" y2="64" stroke="url(#goldGradient)" stroke-width="5" opacity="0.6"/>
+    </g>
+    
+    <!-- Text: RPG -->
+    <text 
+      x="512" 
+      y="820" 
+      font-family="Cinzel, Georgia, serif" 
+      font-size="140" 
+      font-weight="bold" 
+      fill="url(#goldGradient)" 
+      text-anchor="middle"
+      filter="url(#glow)"
+    >
+      RPG
+    </text>
+    
+    <!-- Text: AI -->
+    <text 
+      x="512" 
+      y="940" 
+      font-family="Cinzel, Georgia, serif" 
+      font-size="90" 
+      font-weight="bold" 
+      fill="url(#goldGradient)" 
+      text-anchor="middle"
+      opacity="0.85"
+    >
+      AI
+    </text>
+    
+    <!-- Corner decorations -->
+    <g fill="url(#goldGradient)" opacity="0.4">
+      <!-- Top left -->
+      <polygon points="80,100 88,120 110,120 92,132 100,154 80,142 60,154 68,132 50,120 72,120"/>
+      <!-- Top right -->
+      <polygon points="944,100 952,120 974,120 956,132 964,154 944,142 924,154 932,132 914,120 936,120"/>
+      <!-- Bottom decorative line -->
+      <line x1="200" y1="980" x2="824" y2="980" stroke="url(#goldGradient)" stroke-width="3"/>
+    </g>
+  </g>
+</svg>

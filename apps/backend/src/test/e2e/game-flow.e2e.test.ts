@@ -10,7 +10,6 @@ import { buildServer } from '../../server.js';
 describe('E2E - Complete Game Flow', () => {
     let app: FastifyInstance;
     let accessToken: string;
-    let userId: string;
     let characterId: string;
     let sessionId: string;
 
@@ -33,7 +32,7 @@ describe('E2E - Complete Game Flow', () => {
 
         const registerBody = JSON.parse(registerResponse.body);
         accessToken = registerBody.accessToken;
-        userId = registerBody.user.id;
+        // userId available in registerBody.user.id if needed
 
         // 2. Create character
         const characterResponse = await app.inject({

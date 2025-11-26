@@ -1,4 +1,3 @@
-import { GameError } from './GameError.js';
 import { ErrorCode } from '../types/index.js';
 
 export class AuthError extends Error {

@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useGameEffects } from '../hooks/useGameEffects';
 import { theme } from '../theme';
 
 interface LoginScreenProps {
@@ -19,6 +20,7 @@ interface LoginScreenProps {
 
 export function LoginScreen({ onNavigateToRegister }: LoginScreenProps) {
   const { login } = useAuth();
+  const { playButtonPress, playSuccess, playError } = useGameEffects();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,18 +30,22 @@ export function LoginScreen({ onNavigateToRegister }: LoginScreenProps) {
   const validateForm = (): boolean => {
     if (!email.trim()) {
       setError('El email es requerido');
+      playError();
       return false;
     }
     if (!email.includes('@')) {
       setError('Ingresa un email válido');
+      playError();
       return false;
     }
     if (!password) {
       setError('La contraseña es requerida');
+      playError();
       return false;
     }
     if (password.length < 6) {
       setError('La contraseña debe tener al menos 6 caracteres');
+      playError();
       return false;
     }
     return true;
@@ -47,16 +53,19 @@ export function LoginScreen({ onNavigateToRegister }: LoginScreenProps) {
 
   const handleLogin = async () => {
     setError(null);
+    playButtonPress();
 
     if (!validateForm()) return;
 
     setIsLoading(true);
     try {
       await login(email.trim().toLowerCase(), password);
+      playSuccess();
       // Navigation happens automatically via AuthContext state change
     } catch (error_) {
       const message = error_ instanceof Error ? error_.message : 'Error al iniciar sesión';
       setError(message);
+      playError();
     } finally {
       setIsLoading(false);
     }

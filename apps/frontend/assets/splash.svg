@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- RPG-AI Supreme Splash Screen - Centered Logo -->
+<!-- Use as splash-icon.png source (export at 200x200 or as needed) -->
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f7cf46;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#ffd700;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#b8982f;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- D20 Shape - Main Visual (centered) -->
+  <g filter="url(#glow)" transform="translate(256, 220)">
+    <!-- Outer triangle -->
+    <polygon 
+      points="0,-160 139,80 -139,80" 
+      fill="none" 
+      stroke="url(#goldGradient)" 
+      stroke-width="8"
+    />
+    
+    <!-- Inner structure lines -->
+    <line x1="0" y1="-160" x2="0" y2="80" stroke="url(#goldGradient)" stroke-width="4" opacity="0.6"/>
+    <line x1="-139" y1="80" x2="70" y2="-40" stroke="url(#goldGradient)" stroke-width="4" opacity="0.6"/>
+    <line x1="139" y1="80" x2="-70" y2="-40" stroke="url(#goldGradient)" stroke-width="4" opacity="0.6"/>
+    
+    <!-- AI nodes -->
+    <circle cx="0" cy="-20" r="24" fill="url(#goldGradient)"/>
+    <circle cx="0" cy="-100" r="14" fill="url(#goldGradient)" opacity="0.8"/>
+    <circle cx="-80" cy="50" r="14" fill="url(#goldGradient)" opacity="0.8"/>
+    <circle cx="80" cy="50" r="14" fill="url(#goldGradient)" opacity="0.8"/>
+    
+    <!-- Neural connections -->
+    <line x1="0" y1="-44" x2="0" y2="-86" stroke="url(#goldGradient)" stroke-width="3" opacity="0.6"/>
+    <line x1="-16" y1="-8" x2="-66" y2="40" stroke="url(#goldGradient)" stroke-width="3" opacity="0.6"/>
+    <line x1="16" y1="-8" x2="66" y2="40" stroke="url(#goldGradient)" stroke-width="3" opacity="0.6"/>
+  </g>
+  
+  <!-- Text: RPG-AI -->
+  <text 
+    x="256" 
+    y="420" 
+    font-family="Cinzel, Georgia, serif" 
+    font-size="64" 
+    font-weight="bold" 
+    fill="url(#goldGradient)" 
+    text-anchor="middle"
+    filter="url(#glow)"
+  >
+    RPG-AI
+  </text>
+  
+  <!-- Tagline -->
+  <text 
+    x="256" 
+    y="465" 
+    font-family="Cinzel, Georgia, serif" 
+    font-size="20" 
+    fill="url(#goldGradient)" 
+    text-anchor="middle"
+    opacity="0.7"
+  >
+    Your AI Dungeon Master
+  </text>
+</svg>

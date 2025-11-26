@@ -468,8 +468,8 @@ export class CastSpellCommand extends BaseGameCommand {
       case 'teleport': {
         if (effect.location) {
           // target.position = { ...effect.location };
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          description = `Teleported to ${effect.location.name || 'new location'}`;
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+          description = `Teleported to ${(effect.location as any).name || 'new location'}`;
           // Teleport is a state change, not exactly an effect in the list, but we can return it as a special effect or handle it in engine
         }
         break;

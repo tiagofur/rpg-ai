@@ -12,10 +12,11 @@ import {
   IReward,
   CommandType,
   IGameEffect,
-  EffectType,
-  IGameEntity
+  EffectType
 } from '../interfaces.js';
 import { CombatDescriptionGenerator } from '../utils/CombatDescriptionGenerator.js';
+import { LootManager, type ILootResult } from '../loot/index.js';
+import { questManager } from '../quests/index.js';
 
 export interface IAttackParameters {
   targetId: string;
@@ -31,6 +32,10 @@ export class AttackCommand extends BaseGameCommand {
   private hitChance: number = 0;
 
   private isCritical: boolean = false;
+
+  private enemyKilled: boolean = false;
+
+  private lootGenerated: ILootResult | null = null;
 
   constructor() {
     super(
@@ -255,11 +260,161 @@ export class AttackCommand extends BaseGameCommand {
       targetId: target.id
     };
 
+    // Check if enemy is killed (target HP - damage <= 0)
+    const targetCurrentHp = target.health?.current ?? 0;
+    const newHp = targetCurrentHp - this.damageRoll;
+
+    this.enemyKilled = newHp <= 0;
+
     // Conceder experiencia
-    const experienceGained = this.calculateExperienceReward(attacker, target, this.damageRoll);
+    let experienceGained = this.calculateExperienceReward(attacker, target, this.damageRoll);
 
     // Crear recompensas
     const rewards: Array<IReward> = [];
+
+    // If enemy is killed, generate loot and update quest progress
+    if (this.enemyKilled) {
+      // Generate loot based on enemy type
+      const enemyType = (target as any).templateId || (target as any).type || target.id;
+      const luckModifier = attacker.attributes.luck || 10;
+
+      this.lootGenerated = LootManager.generateLoot(enemyType, 0, { luck: luckModifier });
+
+      // Add experience bonus for kill
+      const killExpBonus = this.calculateKillExperienceBonus(attacker, target);
+      experienceGained += killExpBonus;
+
+      // Log enemy death
+      const deathMessage = CombatDescriptionGenerator.generateKillDescription(attacker.name, target.name, weaponType);
+
+      logEntries.push({
+        id: uuidv4(),
+        timestamp: new Date().toISOString(),
+        level: LogLevel.INFO,
+        category: 'combat',
+        message: deathMessage,
+        data: {
+          target: target.name,
+          targetId: target.id,
+          type: 'enemy_death',
+          finalDamage: this.damageRoll,
+          overkill: Math.abs(newHp)
+        }
+      });
+
+      notifications.push({
+        id: uuidv4(),
+        type: 'success',
+        title: 'Enemy Defeated!',
+        message: deathMessage,
+        timestamp: new Date().toISOString(),
+        duration: 4000
+      });
+
+      // Add loot rewards
+      if (this.lootGenerated) {
+        if (this.lootGenerated.gold > 0) {
+          rewards.push({
+            type: 'gold',
+            amount: this.lootGenerated.gold,
+            description: `Looted ${this.lootGenerated.gold} gold`
+          });
+
+          logEntries.push({
+            id: uuidv4(),
+            timestamp: new Date().toISOString(),
+            level: LogLevel.INFO,
+            category: 'loot',
+            message: `Found ${this.lootGenerated.gold} gold coins!`,
+            data: { gold: this.lootGenerated.gold, type: 'gold_loot' }
+          });
+        }
+
+        if (this.lootGenerated.items.length > 0) {
+          for (const lootItem of this.lootGenerated.items) {
+            rewards.push({
+              type: 'item',
+              itemId: lootItem.item.id,
+              amount: lootItem.quantity,
+              description: `Found ${lootItem.quantity}x ${lootItem.item.name}`
+            });
+
+            const rarityColor = lootItem.item.rarity === 'legendary' ? '🟡' :
+              lootItem.item.rarity === 'epic' ? '🟣' :
+                lootItem.item.rarity === 'rare' ? '🔵' :
+                  lootItem.item.rarity === 'uncommon' ? '🟢' : '⚪';
+
+            logEntries.push({
+              id: uuidv4(),
+              timestamp: new Date().toISOString(),
+              level: LogLevel.INFO,
+              category: 'loot',
+              message: `${rarityColor} Found: ${lootItem.quantity}x ${lootItem.item.name}`,
+              data: {
+                itemId: lootItem.item.id,
+                itemName: lootItem.item.name,
+                quantity: lootItem.quantity,
+                rarity: lootItem.item.rarity,
+                type: 'item_loot'
+              }
+            });
+          }
+
+          notifications.push({
+            id: uuidv4(),
+            type: 'info',
+            title: 'Loot Collected!',
+            message: `Found ${this.lootGenerated.items.length} item(s) and ${this.lootGenerated.gold} gold`,
+            timestamp: new Date().toISOString(),
+            duration: 5000
+          });
+        }
+      }
+
+      // Update quest progress for KILL objectives
+      try {
+        const characterId = attacker.id;
+        const activeQuests = questManager.getActiveQuests(characterId);
+
+        for (const quest of activeQuests) {
+          const progressResults = questManager.updateProgress(
+            characterId,
+            'KILL',
+            enemyType,
+            1
+          );
+
+          // Check if any progress was made for this quest
+          const questProgress = progressResults.find(p => p.questId === quest.questId);
+          if (questProgress) {
+            if (questProgress.completed) {
+              logEntries.push({
+                id: uuidv4(),
+                timestamp: new Date().toISOString(),
+                level: LogLevel.INFO,
+                category: 'quest',
+                message: `Quest objective completed!`,
+                data: { questId: quest.questId, type: 'objective_complete' }
+              });
+            }
+
+            if (questProgress.questCompleted) {
+              notifications.push({
+                id: uuidv4(),
+                type: 'success',
+                title: 'Quest Complete!',
+                message: `You have completed: ${quest.questId}`,
+                timestamp: new Date().toISOString(),
+                duration: 6000
+              });
+            }
+          }
+        }
+      } catch {
+        // Quest system not initialized or no active quests - silently continue
+      }
+    }
+
     if (experienceGained > 0) {
       rewards.push({
         type: 'experience',
@@ -398,5 +553,25 @@ export class AttackCommand extends BaseGameCommand {
     const levelMultiplier = Math.max(0.5, target.level / attacker.level);
 
     return Math.floor(baseExp * levelMultiplier);
+  }
+
+  private calculateKillExperienceBonus(attacker: ICharacter, target: ICharacter): number {
+    // Bonus de experiencia por matar al enemigo
+    // Base XP = nivel del enemigo * 20
+    const baseKillExp = target.level * 20;
+
+    // Multiplicador por diferencia de nivel
+    const levelDiff = target.level - attacker.level;
+    let levelMultiplier = 1;
+
+    if (levelDiff > 0) {
+      // Más XP si el enemigo es de nivel superior
+      levelMultiplier = 1 + (levelDiff * 0.15); // +15% por nivel de diferencia
+    } else if (levelDiff < 0) {
+      // Menos XP si el enemigo es de nivel inferior
+      levelMultiplier = Math.max(0.1, 1 + (levelDiff * 0.1)); // -10% por nivel, mínimo 10%
+    }
+
+    return Math.floor(baseKillExp * levelMultiplier);
   }
 }

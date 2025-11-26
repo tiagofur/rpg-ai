@@ -1,8 +1,7 @@
 import { createHash } from 'node:crypto';
 import { FastifyRequest } from 'fastify';
 import { IApiGatewayConfig, IRateLimitConfig } from './ApiGateway.js';
-import { createRedisClient, InMemoryRedisClient } from '../utils/redis.js';
-import type { IRedisClient } from '../cache/interfaces/IRedisClient.js';
+import { InMemoryRedisClient } from '../utils/redis.js';
 
 // Rate limiting dinámico basado en roles
 const getDynamicRateLimit = async (request: FastifyRequest): Promise<number> => {
@@ -101,21 +100,6 @@ const serviceRateLimits: Record<string, IRateLimitConfig> = {
 };
 
 // Configuración principal del API Gateway
-// Redis will be initialized lazily - use getApiGatewayConfig() instead
-let _cachedRedis: IRedisClient | null = null;
-
-async function getOrCreateRedis(): Promise<IRedisClient> {
-  if (!_cachedRedis) {
-    _cachedRedis = await createRedisClient({
-      host: process.env['REDIS_HOST'] || 'localhost',
-      port: Number.parseInt(process.env['REDIS_PORT'] || '6379'),
-      password: process.env['REDIS_PASSWORD'],
-      db: Number.parseInt(process.env['REDIS_DB'] || '0'),
-    });
-  }
-  return _cachedRedis;
-}
-
 // Use InMemoryRedisClient as default to avoid initialization issues
 export const apiGatewayConfig: IApiGatewayConfig = {
   redis: new InMemoryRedisClient() as any,

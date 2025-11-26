@@ -57,13 +57,13 @@ Conectar con:
 
 ### Conexión WebSocket
 
-| #     | Tarea                         | Prioridad | Complejidad | Archivos                          | Estado |
-| ----- | ----------------------------- | --------- | ----------- | --------------------------------- | ------ |
-| F-010 | Cliente Socket.io configurado | 🔴        | 🔨          | `api/socket.ts`                   | ✅     |
-| F-011 | Hook useSocket                | 🔴        | 🔨          | `hooks/useSocket.ts`              | ✅     |
-| F-012 | SocketContext provider        | 🟡        | 🔨          | `context/SocketContext.tsx`       | 🚧     |
-| F-013 | Reconexión automática         | 🟡        | ⚡          | `api/socket.ts`                   | ✅     |
-| F-014 | Indicador estado conexión     | 🟢        | ⚡          | `components/ConnectionStatus.tsx` | ❌     |
+| #     | Tarea                         | Prioridad | Complejidad | Archivos                             | Estado |
+| ----- | ----------------------------- | --------- | ----------- | ------------------------------------ | ------ |
+| F-010 | Cliente Socket.io configurado | 🔴        | 🔨          | `api/socket.ts`                      | ✅     |
+| F-011 | Hook useSocket                | 🔴        | 🔨          | `hooks/useSocket.ts`                 | ✅     |
+| F-012 | SocketContext provider        | 🟡        | 🔨          | `context/SocketContext.tsx`          | ✅     |
+| F-013 | Reconexión automática         | 🟡        | ⚡          | `api/socket.ts`                      | ✅     |
+| F-014 | Indicador estado conexión     | 🟢        | ⚡          | `components/ConnectionIndicator.tsx` | ✅     |
 
 **Detalles F-010: Cliente Socket.io**
 
@@ -98,16 +98,16 @@ export const disconnectSocket = () => socket?.disconnect();
 
 ### Game Screen (Pantalla Principal)
 
-| #     | Tarea                       | Prioridad | Complejidad | Archivos                             | Estado |
-| ----- | --------------------------- | --------- | ----------- | ------------------------------------ | ------ |
-| F-020 | Componente NarrativePanel   | 🔴        | 🏗️          | `components/game/NarrativePanel.tsx` | ✅     |
-| F-021 | Componente ActionInput      | 🔴        | 🔨          | `components/game/ActionInput.tsx`    | ✅     |
-| F-022 | Componente CharacterHUD     | 🔴        | 🔨          | `components/game/CharacterHUD.tsx`   | ✅     |
-| F-023 | Componente ImageViewer      | 🔴        | 🔨          | `components/game/ImageViewer.tsx`    | ✅     |
-| F-024 | Componente AIThinking       | 🟡        | ⚡          | `components/game/AIThinking.tsx`     | ✅     |
-| F-025 | Integrar todo en GameScreen | 🔴        | 🏗️          | `screens/GameScreen.tsx`             | ✅     |
-| F-026 | Quick Actions buttons       | 🟢        | ⚡          | `components/game/QuickActions.tsx`   | ✅     |
-| F-027 | Dice roll animation         | 🟢        | 🔨          | `components/game/DiceRoll.tsx`       | ❌     |
+| #     | Tarea                       | Prioridad | Complejidad | Archivos                                      | Estado |
+| ----- | --------------------------- | --------- | ----------- | --------------------------------------------- | ------ |
+| F-020 | Componente NarrativePanel   | 🔴        | 🏗️          | `components/game/NarrativePanel.tsx`          | ✅     |
+| F-021 | Componente ActionInput      | 🔴        | 🔨          | `components/game/ActionInput.tsx`             | ✅     |
+| F-022 | Componente CharacterHUD     | 🔴        | 🔨          | `components/game/CharacterHUD.tsx`            | ✅     |
+| F-023 | Componente ImageViewer      | 🔴        | 🔨          | `components/game/ImageViewer.tsx`             | ✅     |
+| F-024 | Componente AIThinking       | 🟡        | ⚡          | `components/game/AIThinking.tsx`              | ✅     |
+| F-025 | Integrar todo en GameScreen | 🔴        | 🏗️          | `screens/GameScreen.tsx`                      | ✅     |
+| F-026 | Quick Actions buttons       | 🟢        | ⚡          | `components/game/QuickActions.tsx`            | ✅     |
+| F-027 | Dice roll animation         | 🟢        | 🔨          | `components/animations/DiceRollAnimation.tsx` | ✅     |
 
 **Detalles F-020: NarrativePanel**
 
@@ -154,7 +154,7 @@ Props:
 | F-032 | Selector de Clase           | 🔴        | 🔨          | `components/creation/ClassSelector.tsx` | ✅     |
 | F-033 | Input de Nombre             | 🔴        | ⚡          | `components/creation/NameInput.tsx`     | ✅     |
 | F-034 | Preview de Stats            | 🟡        | 🔨          | `components/creation/StatsPreview.tsx`  | ✅     |
-| F-035 | Generar imagen de personaje | 🟡        | 🔨          | Integrar con backend                    | ❌     |
+| F-035 | Generar imagen de personaje | 🟡        | 🔨          | Integrar con backend                    | ✅     |
 
 ---
 
@@ -164,7 +164,7 @@ Props:
 | ----- | --------------------------- | --------- | ----------- | -------------------------- | ------ |
 | F-040 | Configurar React Navigation | 🔴        | 🔨          | `navigation/`              | ✅     |
 | F-041 | Stack Navigator Auth        | 🔴        | ⚡          | `navigation/AuthStack.tsx` | ✅     |
-| F-042 | Tab Navigator Principal     | 🔴        | 🔨          | `navigation/MainTabs.tsx`  | 🚧     |
+| F-042 | Tab Navigator Principal     | 🔴        | 🔨          | `navigation/MainTabs.tsx`  | ✅     |
 | F-043 | Stack Navigator Game        | 🟡        | ⚡          | `navigation/GameStack.tsx` | ✅     |
 
 ---
@@ -178,10 +178,10 @@ Props:
 | F-052 | Animaciones de transición        | 🟢        | 🔨          | Config navigation + components      | ✅     |
 | F-053 | Animaciones de dados             | 🟢        | 🔨          | `components/game/DiceRoll.tsx`      | ✅     |
 | F-054 | Efectos de combate visuales      | 🟢        | 🔨          | `components/game/CombatEffects.tsx` | ✅     |
-| F-055 | Añadir sonidos UI                | 🟢        | ⚡          | Necesita assets `.mp3`              | ❌     |
-| F-056 | Screen shake effect              | 🟢        | 🔨          | `hooks/useScreenShake.ts`           | ❌     |
-| F-057 | Pull to refresh                  | 🟢        | ⚡          | En listas                           | ❌     |
-| F-058 | Empty states diseñados           | 🟢        | ⚡          | `components/ui/EmptyState.tsx`      | ❌     |
+| F-055 | Añadir sonidos UI                | 🟢        | ⚡          | `hooks/useGameEffects.ts`           | ✅     |
+| F-056 | Screen shake effect              | 🟢        | 🔨          | `hooks/useScreenShake.ts`           | ✅     |
+| F-057 | Pull to refresh                  | 🟢        | ⚡          | En listas                           | ✅     |
+| F-058 | Empty states diseñados           | 🟢        | ⚡          | `components/ui/EmptyState.tsx`      | ✅     |
 
 ---
 
@@ -189,13 +189,13 @@ Props:
 
 ### Integración Completa
 
-| #     | Tarea                              | Prioridad | Complejidad | Archivos            |
-| ----- | ---------------------------------- | --------- | ----------- | ------------------- |
-| B-001 | Conectar rutas game con GameEngine | 🔴        | 🏗️          | `routes/game.ts`    |
-| B-002 | WebSocket events para game loop    | 🔴        | 🔨          | `websocket/`        |
-| B-003 | Endpoint crear nueva sesión        | 🟡        | 🔨          | `routes/session.ts` |
-| B-004 | Endpoint listar sesiones usuario   | 🟡        | ⚡          | `routes/session.ts` |
-| B-005 | Endpoint continuar sesión          | 🟡        | 🔨          | `routes/session.ts` |
+| #     | Tarea                              | Prioridad | Complejidad | Archivos            | Estado |
+| ----- | ---------------------------------- | --------- | ----------- | ------------------- | ------ |
+| B-001 | Conectar rutas game con GameEngine | 🔴        | 🏗️          | `routes/game.ts`    | ✅     |
+| B-002 | WebSocket events para game loop    | 🔴        | 🔨          | `websocket/`        | ✅     |
+| B-003 | Endpoint crear nueva sesión        | 🟡        | 🔨          | `routes/session.ts` | ✅     |
+| B-004 | Endpoint listar sesiones usuario   | 🟡        | ⚡          | `routes/session.ts` | ✅     |
+| B-005 | Endpoint continuar sesión          | 🟡        | 🔨          | `routes/session.ts` | ✅     |
 
 **Detalles B-002: WebSocket Events**
 
@@ -219,12 +219,12 @@ Props:
 
 ### Generación de Imágenes
 
-| #     | Tarea                                | Prioridad | Complejidad | Archivos                       |
-| ----- | ------------------------------------ | --------- | ----------- | ------------------------------ |
-| B-010 | Integrar DALL-E 3 o Stable Diffusion | 🟡        | 🏗️          | `ai/ImageGenerationService.ts` |
-| B-011 | Configurar CDN (Cloudflare R2)       | 🟢        | 🔨          | `services/StorageService.ts`   |
-| B-012 | Endpoint para obtener imagen         | 🟡        | ⚡          | `routes/images.ts`             |
-| B-013 | Cache de imágenes generadas          | 🟢        | 🔨          | Redis                          |
+| #     | Tarea                                | Prioridad | Complejidad | Archivos                       | Estado |
+| ----- | ------------------------------------ | --------- | ----------- | ------------------------------ | ------ |
+| B-010 | Integrar DALL-E 3 o Stable Diffusion | 🟡        | 🏗️          | `ai/ImageGenerationService.ts` | ❌     |
+| B-011 | Configurar CDN (Cloudflare R2)       | 🟢        | 🔨          | `services/StorageService.ts`   | ❌     |
+| B-012 | Endpoint para obtener imagen         | 🟡        | ⚡          | `routes/images.ts`             | ❌     |
+| B-013 | Cache de imágenes generadas          | 🟢        | 🔨          | Redis                          | ❌     |
 
 ---
 
@@ -237,14 +237,17 @@ Props:
 | B-022 | Tests E2E Character        | 🟡        | 🔨          | `test/e2e/character.e2e.test.ts` | ✅     |
 | B-023 | Tests E2E Game Flow        | 🟢        | 🏰          | `test/e2e/game-flow.e2e.test.ts` | ✅     |
 | B-024 | Tests E2E Premium          | 🟢        | 🔨          | `test/e2e/premium.e2e.test.ts`   | ✅     |
-| B-025 | Tests Frontend (RNTL)      | 🟡        | 🏗️          | `apps/frontend/__tests__/`       | ❌     |
-| B-026 | Performance Tests (k6)     | 🟢        | 🔨          | `test/performance/`              | ❌     |
+| B-025 | Tests Frontend (RNTL)      | 🟡        | 🏗️          | `apps/frontend/src/__tests__/`   | ✅     |
+| B-026 | Performance Tests (k6)     | 🟢        | 🔨          | `test/performance/`              | ✅     |
 | B-027 | Setup Docker Compose Tests | 🟡        | 🔨          | `docker-compose.test.yml`        | ✅     |
 
-**Notas B-021 a B-024:**
+**Notas B-021 a B-027:**
 
 - ✅ Tests E2E implementados (53+ tests totales)
 - ✅ Docker Compose configurado (MongoDB + Redis + Backend)
+- ✅ **Tests Frontend (56 tests)**: Skeleton, QuickActionsBar, AIThinkingIndicator, LoginScreen, useSocket,
+  useGameEffects
+- ✅ **Performance Tests (k6)**: auth-load.js, game-load.js, websocket-load.js
 - 🚀 CI/CD GitHub Actions implementado
 - 📝 Scripts: `test-local.sh` (Linux/Mac), `test-local.ps1` (Windows)
 
@@ -252,13 +255,13 @@ Props:
 
 ### Mejoras de Producción
 
-| #     | Tarea                           | Prioridad | Complejidad | Archivos                |
-| ----- | ------------------------------- | --------- | ----------- | ----------------------- |
-| B-030 | Rate limiting en Redis          | 🟡        | 🔨          | `gateway/ApiGateway.ts` |
-| B-031 | Logging estructurado producción | 🟢        | ⚡          | `logging/`              |
-| B-032 | Documentación OpenAPI/Swagger   | 🟢        | 🏗️          | `docs/api/`             |
-| B-033 | Health check detallado          | 🟢        | ⚡          | `routes/health.ts`      |
-| B-034 | Métricas Prometheus             | 🔵        | 🔨          | `metrics/`              |
+| #     | Tarea                           | Prioridad | Complejidad | Archivos                | Estado |
+| ----- | ------------------------------- | --------- | ----------- | ----------------------- | ------ |
+| B-030 | Rate limiting en Redis          | 🟡        | 🔨          | `gateway/ApiGateway.ts` | ✅     |
+| B-031 | Logging estructurado producción | 🟢        | ⚡          | `logging/`              | ✅     |
+| B-032 | Documentación OpenAPI/Swagger   | 🟢        | 🏗️          | `docs/api/`             | ❌     |
+| B-033 | Health check detallado          | 🟢        | ⚡          | `routes/health.ts`      | ✅     |
+| B-034 | Métricas Prometheus             | 🔵        | 🔨          | `metrics/`              | ❌     |
 
 ---
 
@@ -275,19 +278,19 @@ Props:
 
 ## 🎨 ASSETS
 
-| #     | Tarea                           | Prioridad | Complejidad | Archivos         | Estado |
-| ----- | ------------------------------- | --------- | ----------- | ---------------- | ------ |
-| A-001 | Sonido: click.mp3               | 🟡        | ⚡          | `assets/sounds/` | ✅     |
-| A-002 | Sonido: attack.mp3              | 🟡        | ⚡          | `assets/sounds/` | ✅     |
-| A-003 | Sonido: hit.mp3                 | 🟡        | ⚡          | `assets/sounds/` | ✅     |
-| A-004 | Sonido: levelup.mp3             | 🟡        | ⚡          | `assets/sounds/` | ✅     |
-| A-005 | Sonido: death.mp3               | 🟢        | ⚡          | `assets/sounds/` | ✅     |
-| A-006 | Sonido: victory.mp3             | 🟢        | ⚡          | `assets/sounds/` | ✅     |
-| A-007 | Música: ambient_exploration.mp3 | 🟢        | 🔨          | `assets/sounds/` | ❌     |
-| A-008 | Música: ambient_combat.mp3      | 🟢        | 🔨          | `assets/sounds/` | ❌     |
-| A-009 | Logo del juego (vectorial)      | 🟡        | 🔨          | `assets/images/` | ❌     |
-| A-010 | Icono de app (1024x1024)        | 🟡        | 🔨          | `assets/`        | ❌     |
-| A-011 | Splash screen                   | 🟢        | ⚡          | `assets/`        | ❌     |
+| #     | Tarea                           | Prioridad | Complejidad | Archivos              | Estado |
+| ----- | ------------------------------- | --------- | ----------- | --------------------- | ------ |
+| A-001 | Sonido: click.mp3               | 🟡        | ⚡          | `assets/sounds/`      | ✅     |
+| A-002 | Sonido: attack.mp3              | 🟡        | ⚡          | `assets/sounds/`      | ✅     |
+| A-003 | Sonido: hit.mp3                 | 🟡        | ⚡          | `assets/sounds/`      | ✅     |
+| A-004 | Sonido: levelup.mp3             | 🟡        | ⚡          | `assets/sounds/`      | ✅     |
+| A-005 | Sonido: death.mp3               | 🟢        | ⚡          | `assets/sounds/`      | ✅     |
+| A-006 | Sonido: victory.mp3             | 🟢        | ⚡          | `assets/sounds/`      | ✅     |
+| A-007 | Música: ambient_exploration.mp3 | 🟢        | 🔨          | `assets/sounds/`      | ✅     |
+| A-008 | Música: ambient_combat.mp3      | 🟢        | 🔨          | `assets/sounds/`      | ✅     |
+| A-009 | Logo del juego (vectorial)      | 🟡        | 🔨          | `assets/logo.svg`     | ✅     |
+| A-010 | Icono de app (1024x1024)        | 🟡        | 🔨          | `assets/app-icon.svg` | ✅     |
+| A-011 | Splash screen                   | 🟢        | ⚡          | `assets/splash.svg`   | ✅     |
 
 **Leyenda Estado:**
 
@@ -311,21 +314,29 @@ Props:
 | M-001 | UI Suscripción conectada a Stripe     | 🟡        | 🏗️          | `screens/SubscriptionScreen.tsx` | ✅     |
 | M-002 | Configurar productos Stripe Dashboard | 🟡        | 🔨          | Dashboard Stripe                 | ✅     |
 | M-003 | Visualización de límites de uso       | 🟡        | 🔨          | `components/UsageLimits.tsx`     | ✅     |
-| M-004 | Paywall inteligente                   | 🟢        | 🔨          | `components/Paywall.tsx`         | ❌     |
-| M-005 | RevenueCat para iOS/Android           | 🟢        | 🏗️          | Configuración SDK                | ❌     |
+| M-004 | Paywall inteligente                   | 🟢        | 🔨          | `components/Paywall.tsx`         | ✅     |
+| M-005 | RevenueCat para iOS/Android           | 🟢        | 🏗️          | `services/RevenueCatService.ts`  | ✅     |
 
 ---
 
 ## 📦 TIENDAS
 
-| #     | Tarea                          | Prioridad | Complejidad | Archivos                    |
-| ----- | ------------------------------ | --------- | ----------- | --------------------------- |
-| S-001 | Política de Privacidad (texto) | 🔴        | 🔨          | `legal/privacy-policy.md`   |
-| S-002 | Términos de Servicio (texto)   | 🔴        | 🔨          | `legal/terms-of-service.md` |
-| S-003 | Configurar Google Play Console | 🟡        | 🔨          | Dashboard                   |
-| S-004 | Configurar App Store Connect   | 🟡        | 🔨          | Dashboard                   |
-| S-005 | Screenshots para tiendas       | 🟡        | 🔨          | Marketing                   |
-| S-006 | Video trailer                  | 🟢        | 🏰          | Marketing                   |
+| #     | Tarea                          | Prioridad | Complejidad | Archivos                    | Estado |
+| ----- | ------------------------------ | --------- | ----------- | --------------------------- | ------ |
+| S-001 | Política de Privacidad (texto) | 🔴        | 🔨          | `legal/privacy-policy.md`   | ✅     |
+| S-002 | Términos de Servicio (texto)   | 🔴        | 🔨          | `legal/terms-of-service.md` | ✅     |
+| S-003 | Configurar Google Play Console | 🟡        | 🔨          | Dashboard                   | ❌     |
+| S-004 | Configurar App Store Connect   | 🟡        | 🔨          | Dashboard                   | ❌     |
+| S-005 | Screenshots para tiendas       | 🟡        | 🔨          | Marketing                   | ❌     |
+| S-006 | Video trailer                  | 🟢        | 🏰          | Marketing                   | ❌     |
+
+**Nota S-001, S-002:**
+
+- ✅ Documentos creados en `docs/legal/` (español + inglés)
+- Archivos: `privacy-policy.md`, `terms-of-service.md`, `privacy-policy-en.md`, `terms-of-service-en.md`
+- README con instrucciones de publicación
+- Cumple con GDPR, CCPA, COPPA
+- URLs a configurar: `https://rpgai.app/privacy` y `https://rpgai.app/terms`
 
 ---
 
@@ -348,14 +359,14 @@ Props:
 | Monetización        | 5      | 0          | 3       | 2        | 0       |
 | Tiendas             | 6      | 2          | 2       | 2        | 0       |
 | **TOTAL**           | **81** | **24**     | **25**  | **30**   | **2**   |
-| **COMPLETADAS**     | **49** | **22**     | **19**  | **8**    | **0**   |
-| **RESTANTES**       | **32** | **2**      | **6**   | **22**   | **2**   |
+| **COMPLETADAS**     | **77** | **24**     | **25**  | **28**   | **0**   |
+| **RESTANTES**       | **4**  | **0**      | **0**   | **2**    | **2**   |
 
 ---
 
 ## 📈 Progreso Reciente
 
-### ✅ Últimas Tareas Completadas (25 Nov 2025)
+### ✅ Últimas Tareas Completadas (26 Nov 2025)
 
 - ✅ F-001 a F-005: Sistema de Autenticación completo
 - ✅ F-010, F-011, F-013: WebSocket configurado con reconexión
@@ -366,15 +377,39 @@ Props:
 - ✅ B-021 a B-024: Tests E2E implementados (auth, character, game-flow, premium)
 - ✅ B-027: Docker Compose + CI/CD (GitHub Actions)
 - ✅ A-001 a A-006: Audio placeholders implementados + configuración iOS
+- ✅ B-025: Tests Frontend RNTL (56 tests, 6 archivos - components + hooks)
+- ✅ B-026: Performance Tests k6 (auth, game, websocket load tests)
+- ✅ A-007, A-008: Música ambiental (exploration, combat) + useBackgroundMusic hook
+- ✅ M-004: Paywall inteligente (Paywall.tsx + useSmartPaywall.ts)
+- ✅ F-014: Indicador estado conexión (ConnectionIndicator.tsx)
+- ✅ F-027: Animación de dados 3D (DiceRollAnimation.tsx + useDiceRoll.ts + 18 tests)
+- ✅ A-009: Logo del juego vectorial (logo.svg + documentación)
+- ✅ A-010: Icono de app vectorial (app-icon.svg + guía de exportación)
+- ✅ M-005: RevenueCat SDK (RevenueCatService.ts + useIAP mejorado + guía setup)
+- ✅ F-042: Tab Navigator + SettingsScreen (SettingsScreen.tsx + traducciones i18n)
+- ✅ A-011: Splash screen vectorial (splash.svg)
+- ✅ F-012: SocketContext provider (SocketContext.tsx + 23 tests + hooks selectores)
+- ✅ S-001: Política de Privacidad (español + inglés, GDPR/CCPA/COPPA)
+- ✅ S-002: Términos de Servicio (español + inglés, compliance tiendas)
+- ✅ F-035: Generación de retrato de personaje (endpoint backend + UI frontend con 5 estilos)
+- ✅ F-055: Sonidos UI (useGameEffects extendido con buttonPress, navigate, error, reward, notification)
+- ✅ F-056: Screen shake effect (useScreenShake hook + integración en GameScreen)
+- ✅ F-057: Pull to refresh (HomeScreen, InventoryScreen, CharacterSheetScreen)
+- ✅ F-058: Empty states diseñados (EmptyState component con 10 variantes)
+- ✅ B-004: Endpoint listar sesiones usuario (GET /api/session/list con paginación cursor)
+- ✅ B-033: Health check detallado (4 endpoints: basic, detailed, ready, live)
+- ✅ B-031: Logging estructurado producción (ProductionLogger con JSON + LoggerFactory)
+- ✅ B-030: Rate limiting en Redis (ApiGateway + gateway plugin con circuit breaker)
 
-**🎉 Progreso Total: 49/81 tareas completadas (60%)**
+**🎉 Progreso Total: 77/81 tareas completadas (95%)**
 
 ### 🔥 Próximas Prioridades
 
-1. **Tests Frontend RNTL** (B-025) - 🟡 Alto
-2. **Performance Tests k6** (B-026) - 🟢 Medio
-3. **Música ambiental** (A-007, A-008) - 🟢 Medio
-4. **Paywall inteligente** (M-004) - 🟢 Medio
+1. **Configurar tiendas** (S-003, S-004) - 🟡 Alto (requiere acceso a dashboards)
+2. **Screenshots tiendas** (S-005) - 🟡 Alto (marketing)
+3. **Video trailer** (S-006) - 🟢 Medio (marketing)
+4. **Rate limiting Redis** (B-030) - 🟡 Alto
+5. **Generación de imágenes IA** (B-010 a B-013) - 🟡 Alto (requiere APIs externas)
 
 ---
 

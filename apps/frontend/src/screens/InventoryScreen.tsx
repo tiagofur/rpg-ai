@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   View,
   Modal,
-  Image,
   ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +18,7 @@ import { BlurView } from 'expo-blur';
 import { useCharacter } from '../hooks/useCharacter';
 import { useGameSession } from '../hooks/useGameSession';
 import { useGameEffects } from '../hooks/useGameEffects';
+import { EmptyState } from '../components/ui/EmptyState';
 import { Item } from '../types';
 import { COLORS, FONTS } from '../theme';
 
@@ -31,12 +32,16 @@ const FILTERS = ['All', 'Weapon', 'Armor', 'Potion', 'Material'];
 
 export function InventoryScreen({ sessionId, characterId, onClose }: InventoryScreenProps) {
   const { t } = useTranslation();
-  const { data: character, isLoading, isError } = useCharacter(characterId);
+  const { data: character, isLoading, isError, refetch, isRefetching } = useCharacter(characterId);
   const { executeCommand } = useGameSession(sessionId);
   const { playHaptic } = useGameEffects();
 
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+
+  const handleRefresh = useCallback(() => {
+    void refetch();
+  }, [refetch]);
 
   if (isLoading) {
     return (
@@ -174,11 +179,21 @@ export function InventoryScreen({ sessionId, characterId, onClose }: InventorySc
         contentContainerStyle={styles.gridContent}
         numColumns={3}
         columnWrapperStyle={styles.gridRow}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
+        }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🎒</Text>
-            <Text style={styles.emptyText}>{t('inventory.empty')}</Text>
-          </View>
+          <EmptyState
+            variant='inventory'
+            size='medium'
+            actionLabel={t('inventory.explore')}
+            onAction={onClose}
+          />
         }
       />
 

@@ -1,5 +1,6 @@
 import { randomInt, randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import {
   createCharacterInputSchema,
   createCharacterDirectInputSchema,
@@ -9,8 +10,24 @@ import {
 
 import { generateCharacterSheet, generateSkillsForClass, generateInventoryForClass } from "../services/CharacterGenerator.js";
 import { serializeCharacter } from "../utils/serializers.js";
+import { AIGatewayService } from "../ai/AIGatewayService.js";
+import { AspectRatio, ImageStyle } from "../ai/interfaces/IAIService.js";
 
 const RNG_MAX = 2 ** 32;
+
+// Schema for character portrait generation
+const generatePortraitInputSchema = z.object({
+  characterId: z.string().uuid().optional(),
+  name: z.string().min(1).max(50),
+  race: z.string().min(1).max(30),
+  characterClass: z.string().min(1).max(30),
+  style: z.enum(['realistic', 'anime', 'painterly', 'pixel-art', 'comic']).optional().default('realistic'),
+});
+
+const generatePortraitResponseSchema = z.object({
+  imageUrl: z.string(),
+  prompt: z.string(),
+});
 
 export async function registerCharacterRoutes(fastify: FastifyInstance) {
   fastify.post("/api/character/create", async (request, reply) => {
@@ -229,6 +246,116 @@ export async function registerCharacterRoutes(fastify: FastifyInstance) {
     } catch (error) {
       request.log.error({ err: error }, "Failed to delete character");
       return reply.status(500).send({ error: { message: "CHARACTER_DELETE_FAILED" } });
+    }
+  });
+
+  // Generate character portrait image
+  fastify.post("/api/character/generate-portrait", async (request, reply) => {
+    const parsed = generatePortraitInputSchema.safeParse(request.body);
+
+    if (!parsed.success) {
+      return reply.status(400).send({ error: parsed.error.flatten() });
+    }
+
+    const { characterId, name, race, characterClass, style } = parsed.data;
+
+    try {
+      const user = request.user as { id: string } | undefined;
+
+      if (!user?.id) {
+        return await reply.status(401).send({ error: { message: "UNAUTHORIZED" } });
+      }
+
+      // If characterId is provided, verify ownership
+      if (characterId) {
+        const character = await fastify.prisma.character.findUnique({
+          where: { id: characterId }
+        });
+
+        if (!character) {
+          return await reply.status(404).send({ error: { message: "CHARACTER_NOT_FOUND" } });
+        }
+
+        if (character.playerId !== user.id) {
+          return await reply.status(403).send({ error: { message: "FORBIDDEN" } });
+        }
+      }
+
+      // Build character portrait prompt
+      const styleDescriptions: Record<string, string> = {
+        'realistic': 'photorealistic, highly detailed, cinematic lighting, 8k, masterpiece',
+        'anime': 'anime style, detailed anime art, vibrant colors, studio ghibli inspired',
+        'painterly': 'oil painting style, classical art, dramatic lighting, renaissance inspired',
+        'pixel-art': '16-bit pixel art, retro game style, detailed sprite art',
+        'comic': 'comic book style, bold lines, cel shaded, graphic novel art'
+      };
+
+      const raceDescriptions: Record<string, string> = {
+        'human': 'human',
+        'humano': 'human',
+        'elf': 'elegant elf with pointed ears',
+        'elfo': 'elegant elf with pointed ears',
+        'dwarf': 'sturdy dwarf with thick beard',
+        'enano': 'sturdy dwarf with thick beard',
+        'halfling': 'cheerful halfling with curly hair',
+        'mediano': 'cheerful halfling with curly hair',
+        'tiefling': 'tiefling with horns and reddish skin',
+        'dragonborn': 'dragonborn with scales and draconic features',
+        'draconido': 'dragonborn with scales and draconic features',
+      };
+
+      const classDescriptions: Record<string, string> = {
+        'warrior': 'wearing heavy armor, battle-scarred',
+        'guerrero': 'wearing heavy armor, battle-scarred',
+        'mage': 'wearing mystical robes, holding arcane tome',
+        'mago': 'wearing mystical robes, holding arcane tome',
+        'rogue': 'wearing leather armor, hooded, mysterious',
+        'picaro': 'wearing leather armor, hooded, mysterious',
+        'bard': 'wearing colorful clothes, charming expression',
+        'bardo': 'wearing colorful clothes, charming expression',
+        'ranger': 'wearing forest attire, with bow and quiver',
+        'explorador': 'wearing forest attire, with bow and quiver',
+        'cleric': 'wearing holy vestments, divine aura',
+        'clerigo': 'wearing holy vestments, divine aura',
+      };
+
+      const raceDesc = raceDescriptions[race.toLowerCase()] || race;
+      const classDesc = classDescriptions[characterClass.toLowerCase()] || characterClass;
+      const styleDesc = styleDescriptions[style] || styleDescriptions['realistic'];
+
+      const prompt = `Portrait of ${name}, a ${raceDesc} ${characterClass}, ${classDesc}. Fantasy RPG character portrait, heroic pose, detailed face, ${styleDesc}`;
+
+      // Initialize AI service with API key from environment
+      const apiKey = process.env['GEMINI_API_KEY'] || process.env['OPENAI_API_KEY'] || '';
+      if (!apiKey) {
+        return await reply.status(503).send({ error: { message: "AI_SERVICE_NOT_CONFIGURED" } });
+      }
+      const aiService = new AIGatewayService(apiKey);
+
+      // Generate image
+      const result = await aiService.generateImage({
+        prompt,
+        aspectRatio: AspectRatio.SQUARE,
+        numberOfImages: 1,
+        style: ImageStyle.DIGITAL_ART,
+        userId: user.id
+      });
+
+      if (!result.images || result.images.length === 0 || !result.images[0]) {
+        return await reply.status(500).send({ error: { message: "IMAGE_GENERATION_FAILED" } });
+      }
+
+      const imageUrl = result.images[0].base64;
+
+      const payload = generatePortraitResponseSchema.parse({
+        imageUrl,
+        prompt
+      });
+
+      return await reply.send(payload);
+    } catch (error) {
+      request.log.error({ err: error }, "Failed to generate character portrait");
+      return reply.status(500).send({ error: { message: "PORTRAIT_GENERATION_FAILED" } });
     }
   });
 }

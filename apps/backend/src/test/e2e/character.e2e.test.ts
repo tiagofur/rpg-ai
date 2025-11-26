@@ -10,7 +10,6 @@ import { buildServer } from '../../server.js';
 describe('E2E - Character Management Flow', () => {
     let app: FastifyInstance;
     let accessToken: string;
-    let userId: string;
     let characterId: string;
 
     const testUser = {
@@ -32,7 +31,7 @@ describe('E2E - Character Management Flow', () => {
 
         const registerBody = JSON.parse(registerResponse.body);
         accessToken = registerBody.accessToken;
-        userId = registerBody.user.id;
+        // userId is available in registerBody.user.id if needed
     });
 
     afterAll(async () => {

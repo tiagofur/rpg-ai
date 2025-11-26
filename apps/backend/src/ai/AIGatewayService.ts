@@ -718,7 +718,9 @@ Mandatos principales:
     } catch (error) {
       // Silently fail for metrics
     }
-  }  /**
+  }
+
+  /**
    * Construye prompt para generación de imagen
    */
   private buildImagePrompt(parameters: IImageGenerationParameters): string {

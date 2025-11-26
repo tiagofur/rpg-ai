@@ -10,9 +10,10 @@ import { GenerateNarrativeCommand } from './GenerateNarrativeCommand.js';
 import { GenerateImageCommand } from './GenerateImageCommand.js';
 import { ProcessInputCommand } from './ProcessInputCommand.js';
 import { RespawnCommand } from './RespawnCommand.js';
+import { StartCombatCommand } from './StartCombatCommand.js';
+import { CombatActionCommand } from './CombatActionCommand.js';
 import { GameError, ErrorCode } from '../../errors/GameError.js';
 import { IAIService } from '../../ai/interfaces/IAIService.js';
-import { IAnalyticsService } from '../../interfaces/IAnalytics.js';
 
 export interface ICommandFactory {
   createCommand(type: CommandType): IGameCommand;
@@ -24,8 +25,7 @@ export class GameCommandFactory implements ICommandFactory {
   private readonly commands = new Map<CommandType, () => IGameCommand>();
 
   constructor(
-    private readonly aiService?: IAIService,
-    private readonly analyticsService?: IAnalyticsService
+    private readonly aiService?: IAIService
   ) {
     this.initializeCommands();
   }
@@ -40,6 +40,8 @@ export class GameCommandFactory implements ICommandFactory {
     this.commands.set(CommandType.INTERACT, () => new InteractCommand());
     this.commands.set(CommandType.LOOT, () => new LootCommand());
     this.commands.set(CommandType.RESPAWN, () => new RespawnCommand());
+    this.commands.set(CommandType.START_COMBAT, () => new StartCombatCommand());
+    this.commands.set(CommandType.COMBAT_ACTION, () => new CombatActionCommand());
 
     // Comandos que requieren IA (solo si el servicio está disponible)
     if (this.aiService) {

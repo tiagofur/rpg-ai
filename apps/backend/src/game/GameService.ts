@@ -6,9 +6,13 @@ import type { IRedisClient } from '../cache/interfaces/IRedisClient.js';
 
 export class GameService {
     private static instance: GameService;
+
     private static initPromise: Promise<GameService> | null = null;
+
     private engine: GameEngine;
+
     private prisma: PrismaClient;
+
     private redis: IRedisClient;
 
     private constructor(redis: IRedisClient) {

@@ -67,6 +67,21 @@ export interface ListCharactersResponse {
     characters: Character[];
 }
 
+export type PortraitStyle = 'realistic' | 'anime' | 'painterly' | 'pixel-art' | 'comic';
+
+export interface GeneratePortraitInput {
+    characterId?: string;
+    name: string;
+    race: string;
+    characterClass: string;
+    style?: PortraitStyle;
+}
+
+export interface GeneratePortraitResponse {
+    imageUrl: string;
+    prompt: string;
+}
+
 // ============================================================================
 // API Functions
 // ============================================================================
@@ -129,5 +144,16 @@ export const characterApi = {
      */
     delete: async (characterId: string): Promise<void> => {
         await client.delete(`/api/character/${characterId}`);
+    },
+
+    /**
+     * Generate a character portrait using AI
+     */
+    generatePortrait: async (input: GeneratePortraitInput): Promise<GeneratePortraitResponse> => {
+        const { data } = await client.post<GeneratePortraitResponse>(
+            '/api/character/generate-portrait',
+            input
+        );
+        return data;
     },
 };

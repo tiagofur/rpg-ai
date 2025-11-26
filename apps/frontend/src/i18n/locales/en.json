@@ -6,7 +6,9 @@
     "exit": "Exit",
     "send": "Send",
     "undo": "Undo",
-    "success": "Success"
+    "success": "Success",
+    "continue": "Continue",
+    "confirm": "Confirm"
   },
   "game": {
     "session": "Session",
@@ -29,6 +31,29 @@
     "quickMove": "Move",
     "quickDefend": "Defend"
   },
+  "combat": {
+    "attack": "Attack",
+    "defend": "Defend",
+    "magic": "Magic",
+    "items": "Items",
+    "flee": "Flee",
+    "yourTurn": "YOUR TURN",
+    "enemyTurn": "Enemy turn...",
+    "chooseAction": "Choose an action",
+    "rounds": "{{count}} rounds",
+    "rewards": "Rewards",
+    "itemsObtained": "Items obtained:",
+    "victory": "VICTORY",
+    "defeat": "DEFEAT",
+    "fled": "Escaped"
+  },
+  "levelup": {
+    "bonuses": "Bonuses",
+    "newAbility": "New Ability",
+    "attributePoints": "Attribute Points",
+    "distributePoints": "Distribute {{count}} points",
+    "decideLater": "Decide later"
+  },
   "character": {
     "title": "Character Sheet",
     "level": "Level",
@@ -47,6 +72,36 @@
     "title": "Inventory",
     "empty": "Your inventory is empty."
   },
+  "equipment": {
+    "title": "Equipment",
+    "gear": "Gear",
+    "statsWithGear": "Stats with Equipment",
+    "attack": "ATK",
+    "defense": "DEF",
+    "health": "HP",
+    "mana": "MP",
+    "selectFor": "Select item for",
+    "equip": "Equip",
+    "unequip": "Unequip",
+    "noItems": "No equippable items available",
+    "unknownItem": "A mysterious item with unknown properties.",
+    "value": "Value",
+    "gold": "gold"
+  },
+  "map": {
+    "current": "You are here",
+    "visited": "Explored",
+    "unexplored": "Unknown",
+    "dangerLevel": "Danger",
+    "travelTo": "Travel Here",
+    "danger": {
+      "safe": "Safe",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "deadly": "Deadly"
+    }
+  },
   "subscription": {
     "title": "Subscriptions",
     "chooseDestiny": "Choose your destiny",
@@ -54,10 +109,182 @@
     "processing": "Processing...",
     "active": "ACTIVE",
     "month": "mo",
+    "tier": "Tier",
+    "upgrade": "Upgrade Now",
     "success": "Subscription Successful",
     "successMessage": "Welcome to the premium club!",
     "errorMessage": "Something went wrong. Please try again.",
     "enterCardDetails": "Please enter valid card details.",
     "paymentDetails": "Payment Details"
+  },
+  "paywall": {
+    "title": {
+      "aiLimit": "Out of AI Power!",
+      "imageLimit": "Out of Image Credits!",
+      "saveLimit": "Save Slots Full!",
+      "characterLimit": "Character Limit Reached!",
+      "premium": "Unlock Premium Content",
+      "locked": "Feature Locked",
+      "upsell": "Enjoying the Adventure?",
+      "milestone": "Great Progress! Level Up?",
+      "default": "Upgrade Your Adventure"
+    },
+    "subtitle": {
+      "aiLimit": "You've used all your AI requests this month. Upgrade to continue your story!",
+      "imageLimit": "Unlock unlimited stunning AI-generated images for your adventures.",
+      "saveLimit": "You need more save slots to preserve this adventure. Upgrade now!",
+      "characterLimit": "Create more heroes and villains for your stories.",
+      "premium": "This exclusive content is available for premium members.",
+      "locked": "Unlock this feature and many more with a subscription.",
+      "upsell": "Take your adventures to the next level with premium features!",
+      "milestone": "You've made amazing progress! Ready for even more epic adventures?",
+      "default": "Choose a plan that suits your adventuring style."
+    },
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "save": "Save",
+    "mo": "mo",
+    "year": "year",
+    "select": "Select",
+    "secure": "Secure payment with Stripe",
+    "cancel": "Cancel anytime, no questions asked"
+  },
+  "usage": {
+    "nearLimit": "Approaching limit"
+  },
+  "connection": {
+    "connected": "Connected",
+    "connecting": "Connecting...",
+    "disconnected": "Disconnected",
+    "error": "Connection Error",
+    "online": "Online",
+    "offline": "Offline",
+    "sync": "Syncing",
+    "unknown": "Unknown",
+    "tapRetry": "Tap to retry",
+    "waitingServer": "Waiting for server..."
+  },
+  "settings": {
+    "title": "Settings",
+    "sections": {
+      "game": "Game",
+      "notifications": "Notifications",
+      "account": "Account",
+      "support": "Support & Legal",
+      "about": "About",
+      "dangerZone": "Danger Zone"
+    },
+    "sound": {
+      "label": "Sound Effects",
+      "description": "Game sounds and effects"
+    },
+    "music": {
+      "label": "Background Music",
+      "description": "Ambient music during gameplay"
+    },
+    "haptics": {
+      "label": "Haptic Feedback",
+      "description": "Vibration on actions"
+    },
+    "notifications": {
+      "label": "Push Notifications",
+      "description": "Receive game updates and alerts"
+    },
+    "subscription": {
+      "label": "Subscription",
+      "description": "Manage your plan"
+    },
+    "language": {
+      "label": "Language",
+      "title": "Choose Language"
+    },
+    "support": {
+      "label": "Contact Support"
+    },
+    "privacy": {
+      "label": "Privacy Policy"
+    },
+    "terms": {
+      "label": "Terms of Service"
+    },
+    "version": {
+      "label": "Version"
+    },
+    "logout": {
+      "label": "Log Out",
+      "title": "Log Out",
+      "message": "Are you sure you want to log out?",
+      "confirm": "Log Out"
+    },
+    "deleteAccount": {
+      "label": "Delete Account",
+      "title": "Delete Account",
+      "message": "This action is permanent and cannot be undone. All your data, characters, and progress will be lost.",
+      "confirm": "Delete Forever",
+      "contactSupport": "Please contact support to delete your account."
+    }
+  },
+  "dialogue": {
+    "continue": "Tap to continue",
+    "skipAnimation": "Tap to skip",
+    "requirementNotMet": "Requirement not met",
+    "optionLocked": "This option is locked",
+    "endConversation": "End conversation",
+    "speaking": "Speaking...",
+    "emotions": {
+      "neutral": "Neutral",
+      "happy": "Happy",
+      "sad": "Sad",
+      "angry": "Angry",
+      "surprised": "Surprised",
+      "scared": "Scared",
+      "thinking": "Thinking",
+      "suspicious": "Suspicious"
+    },
+    "requirements": {
+      "stat": "Requires {{stat}} {{min}}+",
+      "item": "Requires: {{item}}",
+      "quest": "Requires quest: {{quest}}",
+      "gold": "Requires {{gold}} gold",
+      "reputation": "Requires {{faction}} reputation {{min}}+",
+      "level": "Requires level {{level}}+"
+    }
+  },
+  "magic": {
+    "spellbook": "Spellbook",
+    "spellsLearned": "{{count}} spells learned",
+    "noSpells": "No spells learned",
+    "noSpellsHint": "Learn spells by leveling up or finding spell tomes",
+    "selectSpell": "Select a spell to cast",
+    "inCombat": "Select a spell to cast in combat",
+    "notEnoughMana": "Not enough mana",
+    "onCooldown": "On cooldown ({{turns}} turns)",
+    "spellNotLearned": "Spell not learned",
+    "ready": "Ready",
+    "cast": "Cast",
+    "schools": {
+      "all": "All",
+      "fire": "Fire",
+      "ice": "Ice",
+      "lightning": "Lightning",
+      "earth": "Earth",
+      "light": "Light",
+      "dark": "Dark",
+      "arcane": "Arcane",
+      "nature": "Nature"
+    },
+    "stats": {
+      "damage": "DMG",
+      "healing": "HEAL",
+      "range": "Range",
+      "cooldown": "CD",
+      "manaCost": "MP"
+    },
+    "ranges": {
+      "melee": "Melee",
+      "short": "Short",
+      "medium": "Medium",
+      "long": "Long"
+    }
   }
 }

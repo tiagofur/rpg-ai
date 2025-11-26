@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import {
   FlatList,
   StyleSheet,
@@ -11,11 +11,14 @@ import {
   Modal,
   Image,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useGameSession } from '../hooks/useGameSession';
 import { useCharacter } from '../hooks/useCharacter';
 import { useGameEffects } from '../hooks/useGameEffects';
+import { useScreenShake } from '../hooks/useScreenShake';
+import { useCombat } from '../hooks/useCombat';
 import { UsageLimits, type UsageLimitData } from '../components/UsageLimits';
 import { Skeleton } from '../components/Skeleton';
 import { CharacterSheetScreen } from './CharacterSheetScreen';
@@ -29,6 +32,9 @@ import { DailyRewardModal } from '../components/DailyRewardModal';
 import { AIThinkingIndicator } from '../components/AIThinkingIndicator';
 import { QuickActionsBar } from '../components/QuickActionsBar';
 import { NarrativeEntry, getEntryType } from '../components/NarrativeEntry';
+import { CombatUI } from '../components/combat';
+import { LevelUpModal } from '../components/LevelUpModal';
+import type { CombatActionType, ICombatResult } from '../types/combat';
 
 interface GameEvent {
   category?: string;
@@ -64,12 +70,56 @@ export function GameScreen({ sessionId, characterId, token, onExit }: GameScreen
   const { startSession, sessionState, executeCommand, undoCommand } = useGameSession(sessionId);
   const { data: character, refetch: refetchCharacter } = useCharacter(characterId);
   const { playCombatEffect, playHaptic } = useGameEffects();
+  const { shakeStyle, shake } = useScreenShake();
   const [input, setInput] = useState('');
   const [isDead, setIsDead] = useState(false);
   const [activeModal, setActiveModal] = useState<
     'character' | 'inventory' | 'subscription' | 'profile' | null
   >(null);
   const flatListRef = useRef<FlatList>(null);
+
+  // Combat state management
+  const handleCombatStart = useCallback(() => {
+    playHaptic('heavy');
+    shake('hit', 'medium');
+  }, [playHaptic, shake]);
+
+  const handleCombatEnd = useCallback(
+    (result: ICombatResult) => {
+      if (result.outcome === 'victory') {
+        playHaptic('success');
+      } else if (result.outcome === 'defeat') {
+        shake('death', 'heavy');
+      }
+      void refetchCharacter();
+    },
+    [playHaptic, shake, refetchCharacter]
+  );
+
+  const {
+    inCombat,
+    combatState,
+    combatResult,
+    executeAction: executeCombatAction,
+    endCombat,
+    isProcessing: isCombatProcessing,
+  } = useCombat({
+    sessionId,
+    onCombatStart: handleCombatStart,
+    onCombatEnd: handleCombatEnd,
+  });
+
+  // Level up modal state
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [levelUpRewards, setLevelUpRewards] = useState<{
+    newLevel: number;
+    hpBonus: number;
+    manaBonus: number;
+    staminaBonus: number;
+    attributePoints: number;
+    newAbility?: { id: string; name: string; description: string; icon: string };
+    title?: string;
+  } | null>(null);
 
   // Usage limits (mock - en producción viene del backend)
   const [usageLimits] = useState<UsageLimitData[]>([
@@ -96,8 +146,31 @@ export function GameScreen({ sessionId, characterId, token, onExit }: GameScreen
         const isCrit = payload?.critical || false;
         const isMiss = payload?.type === 'miss';
         playCombatEffect(isCrit, isMiss);
+
+        // Screen shake on combat hits
+        if (!isMiss) {
+          shake(isCrit ? 'criticalHit' : 'hit', isCrit ? 'heavy' : 'medium');
+        }
       } else if (data.type === 'loot') {
         playHaptic('success');
+      } else if (data.type === 'death') {
+        shake('death', 'heavy');
+      } else if (data.type === 'level_up') {
+        shake('levelUp', 'light');
+        // Show level up modal with rewards
+        const payload = data.payload as {
+          newLevel: number;
+          hpBonus: number;
+          manaBonus: number;
+          staminaBonus: number;
+          attributePoints: number;
+          newAbility?: { id: string; name: string; description: string; icon: string };
+          title?: string;
+        };
+        if (payload) {
+          setLevelUpRewards(payload);
+          setShowLevelUp(true);
+        }
       }
 
       // In a real app, we would update the React Query cache here
@@ -296,166 +369,214 @@ export function GameScreen({ sessionId, characterId, token, onExit }: GameScreen
 
   return (
     <LinearGradient colors={[COLORS.background, '#1a1a2e']} style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onExit} style={styles.backButton}>
-            <Text style={styles.backButtonText}>← {t('common.exit')}</Text>
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.title}>RPG AI SUPREME</Text>
-            <UsageLimits
-              limits={usageLimits}
-              plan={userPlan}
-              onUpgrade={() => setActiveModal('subscription')}
-              compact
-            />
-          </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={handleUndo}
-              disabled={undoCommand.isPending}
-              style={styles.headerButton}
-            >
-              <Text style={styles.headerButtonText}>{t('common.undo')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setActiveModal('profile')} style={styles.headerButton}>
-              <Text style={styles.headerButtonIcon}>⚙️</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-        {/* Status Bar */}
-        {renderStatusBar()}
-        {/* Visual Scene Area (Placeholder for AI Image) */}
-        <View style={styles.sceneContainer}>
-          {currentSceneImage ? (
-            <Image
-              source={{ uri: currentSceneImage }}
-              style={styles.sceneImage}
-              resizeMode='cover'
-            />
-          ) : (
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.8)']}
-              style={styles.sceneGradient}
-            >
-              <Text style={styles.scenePlaceholderText}>🔮 Visualizing the Realm...</Text>
-            </LinearGradient>
-          )}
-        </View>
-        {/* Game Log */}
-        <View style={styles.gameArea}>
-          <FlatList
-            ref={flatListRef}
-            data={[...history].reverse()}
-            inverted
-            keyExtractor={(item) => item.id || Math.random().toString()}
-            renderItem={renderLogEntry}
-            contentContainerStyle={styles.logList}
-          />
-        </View>
-        {/* Quick Actions Toolbar */}
-        <QuickActionsBar
-          onAction={handleSendCommand}
-          onOpenInventory={() => setActiveModal('inventory')}
-          onOpenCharacter={() => setActiveModal('character')}
-          disabled={executeCommand.isPending}
-        />
-        {/* AI Thinking Indicator */}
-        <AIThinkingIndicator visible={executeCommand.isPending} variant='inline' />
-        {/* Input Area */}
-        <View style={styles.inputArea}>
-          <TextInput
-            style={styles.input}
-            value={input}
-            onChangeText={setInput}
-            placeholder={t('game.inputPlaceholder')}
-            placeholderTextColor={COLORS.textDim}
-            onSubmitEditing={() => handleSendCommand()}
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              (!input.trim() || executeCommand.isPending) && styles.disabledButton,
-            ]}
-            onPress={() => handleSendCommand()}
-            disabled={!input.trim() || executeCommand.isPending}
-          >
-            <Text style={styles.sendButtonText}>{t('common.send')}</Text>
-          </TouchableOpacity>
-        </View>
-        {/* Modals */}
-        <Modal
-          visible={isDead}
-          transparent={true}
-          animationType='fade'
-          onRequestClose={() => {}} // Prevent closing by back button
+      <Animated.View style={[styles.container, shakeStyle]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.container}
         >
-          <View style={styles.gameOverContainer}>
-            <View style={styles.gameOverContent}>
-              <Text style={styles.gameOverTitle}>YOU DIED</Text>
-              <Text style={styles.gameOverText}>Your journey has come to an end... for now.</Text>
-
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={onExit} style={styles.backButton}>
+              <Text style={styles.backButtonText}>← {t('common.exit')}</Text>
+            </TouchableOpacity>
+            <View style={styles.headerCenter}>
+              <Text style={styles.title}>RPG AI SUPREME</Text>
+              <UsageLimits
+                limits={usageLimits}
+                plan={userPlan}
+                onUpgrade={() => setActiveModal('subscription')}
+                compact
+              />
+            </View>
+            <View style={styles.headerActions}>
               <TouchableOpacity
-                style={styles.respawnButton}
-                onPress={handleRespawn}
-                disabled={executeCommand.isPending}
+                onPress={handleUndo}
+                disabled={undoCommand.isPending}
+                style={styles.headerButton}
               >
-                <Text style={styles.respawnButtonText}>
-                  {executeCommand.isPending ? 'Resurrecting...' : 'Respawn at Town'}
-                </Text>
+                <Text style={styles.headerButtonText}>{t('common.undo')}</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity style={styles.exitButton} onPress={onExit}>
-                <Text style={styles.exitButtonText}>Return to Main Menu</Text>
+              <TouchableOpacity
+                onPress={() => setActiveModal('profile')}
+                style={styles.headerButton}
+              >
+                <Text style={styles.headerButtonIcon}>⚙️</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </Modal>
-        <Modal
-          visible={activeModal === 'character'}
-          animationType='slide'
-          onRequestClose={() => setActiveModal(null)}
-        >
-          <CharacterSheetScreen characterId={characterId} onClose={() => setActiveModal(null)} />
-        </Modal>
-        <Modal
-          visible={activeModal === 'inventory'}
-          animationType='slide'
-          onRequestClose={() => setActiveModal(null)}
-        >
-          <InventoryScreen
-            sessionId={sessionId}
-            characterId={characterId}
-            onClose={() => setActiveModal(null)}
+          {/* Status Bar */}
+          {renderStatusBar()}
+          {/* Visual Scene Area (Placeholder for AI Image) */}
+          <View style={styles.sceneContainer}>
+            {currentSceneImage ? (
+              <Image
+                source={{ uri: currentSceneImage }}
+                style={styles.sceneImage}
+                resizeMode='cover'
+              />
+            ) : (
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.8)']}
+                style={styles.sceneGradient}
+              >
+                <Text style={styles.scenePlaceholderText}>🔮 Visualizing the Realm...</Text>
+              </LinearGradient>
+            )}
+          </View>
+          {/* Game Log */}
+          <View style={styles.gameArea}>
+            <FlatList
+              ref={flatListRef}
+              data={[...history].reverse()}
+              inverted
+              keyExtractor={(item) => item.id || Math.random().toString()}
+              renderItem={renderLogEntry}
+              contentContainerStyle={styles.logList}
+            />
+          </View>
+          {/* Quick Actions Toolbar */}
+          <QuickActionsBar
+            onAction={handleSendCommand}
+            onOpenInventory={() => setActiveModal('inventory')}
+            onOpenCharacter={() => setActiveModal('character')}
+            disabled={executeCommand.isPending}
           />
-        </Modal>
-        <Modal
-          visible={activeModal === 'subscription'}
-          animationType='slide'
-          onRequestClose={() => setActiveModal(null)}
-        >
-          <SubscriptionScreen onClose={() => setActiveModal(null)} />
-        </Modal>
-        <Modal
-          visible={activeModal === 'profile'}
-          animationType='slide'
-          onRequestClose={() => setActiveModal(null)}
-        >
-          <ProfileScreen
-            onClose={() => setActiveModal(null)}
-            onLogout={onExit}
-            username={character?.name || 'Adventurer'}
-            onOpenSubscription={() => {
-              setActiveModal('subscription');
+          {/* AI Thinking Indicator */}
+          <AIThinkingIndicator visible={executeCommand.isPending} variant='inline' />
+          {/* Input Area */}
+          <View style={styles.inputArea}>
+            <TextInput
+              style={styles.input}
+              value={input}
+              onChangeText={setInput}
+              placeholder={t('game.inputPlaceholder')}
+              placeholderTextColor={COLORS.textDim}
+              onSubmitEditing={() => handleSendCommand()}
+            />
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                (!input.trim() || executeCommand.isPending) && styles.disabledButton,
+              ]}
+              onPress={() => handleSendCommand()}
+              disabled={!input.trim() || executeCommand.isPending}
+            >
+              <Text style={styles.sendButtonText}>{t('common.send')}</Text>
+            </TouchableOpacity>
+          </View>
+          {/* Modals */}
+          <Modal
+            visible={isDead}
+            transparent={true}
+            animationType='fade'
+            onRequestClose={() => {}} // Prevent closing by back button
+          >
+            <View style={styles.gameOverContainer}>
+              <View style={styles.gameOverContent}>
+                <Text style={styles.gameOverTitle}>YOU DIED</Text>
+                <Text style={styles.gameOverText}>Your journey has come to an end... for now.</Text>
+
+                <TouchableOpacity
+                  style={styles.respawnButton}
+                  onPress={handleRespawn}
+                  disabled={executeCommand.isPending}
+                >
+                  <Text style={styles.respawnButtonText}>
+                    {executeCommand.isPending ? 'Resurrecting...' : 'Respawn at Town'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.exitButton} onPress={onExit}>
+                  <Text style={styles.exitButtonText}>Return to Main Menu</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+          <Modal
+            visible={activeModal === 'character'}
+            animationType='slide'
+            onRequestClose={() => setActiveModal(null)}
+          >
+            <CharacterSheetScreen characterId={characterId} onClose={() => setActiveModal(null)} />
+          </Modal>
+          <Modal
+            visible={activeModal === 'inventory'}
+            animationType='slide'
+            onRequestClose={() => setActiveModal(null)}
+          >
+            <InventoryScreen
+              sessionId={sessionId}
+              characterId={characterId}
+              onClose={() => setActiveModal(null)}
+            />
+          </Modal>
+          <Modal
+            visible={activeModal === 'subscription'}
+            animationType='slide'
+            onRequestClose={() => setActiveModal(null)}
+          >
+            <SubscriptionScreen onClose={() => setActiveModal(null)} />
+          </Modal>
+          <Modal
+            visible={activeModal === 'profile'}
+            animationType='slide'
+            onRequestClose={() => setActiveModal(null)}
+          >
+            <ProfileScreen
+              onClose={() => setActiveModal(null)}
+              onLogout={onExit}
+              username={character?.name || 'Adventurer'}
+              onOpenSubscription={() => {
+                setActiveModal('subscription');
+              }}
+            />
+          </Modal>
+          <DailyRewardModal token={token} />
+
+          {/* Combat UI Overlay */}
+          {inCombat && combatState && (
+            <CombatUI
+              combatState={combatState}
+              combatResult={combatResult}
+              onAction={(action: CombatActionType, targetId?: string) => {
+                executeCombatAction(action, targetId);
+              }}
+              onCombatEnd={endCombat}
+              disabled={isCombatProcessing || executeCommand.isPending}
+              playerXp={character?.experience || 0}
+              playerXpToNext={character?.nextLevelExperience || 1000}
+              playerLevel={character?.level || 1}
+            />
+          )}
+
+          {/* Level Up Modal */}
+          <LevelUpModal
+            visible={showLevelUp}
+            rewards={levelUpRewards}
+            currentAttributes={{
+              strength: character?.attributes?.strength || 10,
+              dexterity: character?.attributes?.dexterity || 10,
+              constitution: character?.attributes?.constitution || 10,
+              intelligence: character?.attributes?.intelligence || 10,
+              wisdom: character?.attributes?.wisdom || 10,
+              charisma: character?.attributes?.charisma || 10,
+            }}
+            onConfirm={(distribution) => {
+              // Send attribute distribution to backend
+              executeCommand.mutate({
+                type: 'distribute_attributes',
+                parameters: { distribution },
+              });
+              setShowLevelUp(false);
+              setLevelUpRewards(null);
+            }}
+            onClose={() => {
+              setShowLevelUp(false);
+              setLevelUpRewards(null);
             }}
           />
-        </Modal>
-        <DailyRewardModal token={token} />
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </Animated.View>
     </LinearGradient>
   );
 }

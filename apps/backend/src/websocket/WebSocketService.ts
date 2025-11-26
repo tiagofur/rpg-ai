@@ -8,8 +8,11 @@ import { actionResolutionSchema, playerActionSchema } from '../shared/index.js';
 
 export class WebSocketService implements IWebSocketManager {
     private io: Server;
+
     private readonly authService: AuthenticationService;
+
     private readonly logger: ILogger;
+
     private readonly gameService: GameService;
 
     // Maps to track connections

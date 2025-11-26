@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -5,14 +6,13 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Alert,
+  RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useCharacter } from '../hooks/useCharacter';
 import { useSubscription } from '../hooks/useSubscription';
-import { useGameSession } from '../hooks/useGameSession';
 import { useGameEffects } from '../hooks/useGameEffects';
 import { COLORS, FONTS } from '../theme';
 
@@ -25,7 +25,7 @@ import { Item } from '../types';
 
 interface EquipmentSlotProps {
   slot: string;
-  item?: Item;
+  item: Item | undefined;
   onPress?: () => void;
 }
 
@@ -74,8 +74,12 @@ function getSlotIcon(slot: string): string {
 
 export function CharacterSheetScreen({ characterId, onClose }: CharacterSheetScreenProps) {
   const { t } = useTranslation();
-  const { data: character, isLoading, isError } = useCharacter(characterId);
+  const { data: character, isLoading, isError, refetch, isRefetching } = useCharacter(characterId);
   const { subscription, config } = useSubscription();
+
+  const handleRefresh = useCallback(() => {
+    void refetch();
+  }, [refetch]);
   // Assuming sessionId is available in context or passed as prop.
   // Since it's not passed, we might need to get it from a global store or context.
   // For now, I'll assume we can't execute commands directly without sessionId.
@@ -135,7 +139,17 @@ export function CharacterSheetScreen({ characterId, onClose }: CharacterSheetScr
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
+        }
+      >
         <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.section}>
           <View style={styles.nameContainer}>
             <Text style={styles.characterName}>{character.name}</Text>

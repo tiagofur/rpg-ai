@@ -8,6 +8,8 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Skeleton } from '../components/Skeleton';
@@ -24,7 +26,7 @@ import {
   RACE_TO_BACKEND,
   CLASS_TO_BACKEND,
 } from '../constants/gameData';
-import { characterApi, type Character } from '../api/character';
+import { characterApi, type Character, type PortraitStyle } from '../api/character';
 import { theme } from '../theme';
 
 interface CharacterCreationScreenProps {
@@ -64,6 +66,9 @@ export function CharacterCreationScreen({
   });
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [portraitUrl, setPortraitUrl] = useState<string | null>(null);
+  const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
+  const [portraitStyle, setPortraitStyle] = useState<PortraitStyle>('realistic');
 
   const currentStepIndex = STEPS.indexOf(currentStep);
   const progress = ((currentStepIndex + 1) / STEPS.length) * 100;
@@ -115,6 +120,35 @@ export function CharacterCreationScreen({
       ...prev,
       [attributeId]: newValue,
     }));
+  };
+
+  const handleGeneratePortrait = async () => {
+    if (!selectedRace || !selectedClass || !characterName.trim()) {
+      setError('Completa nombre, raza y clase antes de generar el retrato');
+      return;
+    }
+
+    setIsGeneratingPortrait(true);
+    setError(null);
+
+    try {
+      const raza = RACE_TO_BACKEND[selectedRace];
+      const clase = CLASS_TO_BACKEND[selectedClass];
+
+      const response = await characterApi.generatePortrait({
+        name: characterName.trim(),
+        race: raza || selectedRace,
+        characterClass: clase || selectedClass,
+        style: portraitStyle,
+      });
+
+      setPortraitUrl(response.imageUrl);
+    } catch (error_) {
+      const message = error_ instanceof Error ? error_.message : 'Error al generar retrato';
+      setError(message);
+    } finally {
+      setIsGeneratingPortrait(false);
+    }
   };
 
   const handleCreate = async () => {
@@ -196,9 +230,64 @@ export function CharacterCreationScreen({
             <Text style={styles.stepSubtitle}>Un nombre digno de las leyendas</Text>
 
             <View style={styles.previewCard}>
-              <Text style={styles.previewIcon}>
-                {selectedRaceData?.icon} {selectedClassData?.icon}
-              </Text>
+              {/* Portrait section */}
+              <View style={styles.portraitSection}>
+                {portraitUrl ? (
+                  <Image source={{ uri: portraitUrl }} style={styles.portraitImage} />
+                ) : (
+                  <View style={styles.portraitPlaceholder}>
+                    <Text style={styles.portraitPlaceholderText}>
+                      {selectedRaceData?.icon} {selectedClassData?.icon}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Portrait style selector */}
+                <View style={styles.styleSelector}>
+                  {(
+                    ['realistic', 'anime', 'painterly', 'pixel-art', 'comic'] as PortraitStyle[]
+                  ).map((style) => (
+                    <TouchableOpacity
+                      key={style}
+                      style={[
+                        styles.styleButton,
+                        portraitStyle === style && styles.styleButtonActive,
+                      ]}
+                      onPress={() => setPortraitStyle(style)}
+                    >
+                      <Text
+                        style={[
+                          styles.styleButtonText,
+                          portraitStyle === style && styles.styleButtonTextActive,
+                        ]}
+                      >
+                        {style === 'realistic'
+                          ? '📷'
+                          : style === 'anime'
+                            ? '🎨'
+                            : style === 'painterly'
+                              ? '🖼️'
+                              : style === 'pixel-art'
+                                ? '👾'
+                                : '💥'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.generateButton, isGeneratingPortrait && styles.buttonDisabled]}
+                  onPress={handleGeneratePortrait}
+                  disabled={isGeneratingPortrait || !characterName.trim()}
+                >
+                  {isGeneratingPortrait ? (
+                    <ActivityIndicator color={theme.colors.text} size='small' />
+                  ) : (
+                    <Text style={styles.generateButtonText}>🎭 Generar Retrato</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+
               <TextInput
                 style={styles.nameInput}
                 placeholder='Escribe tu nombre...'
@@ -429,5 +518,73 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.danger,
     textAlign: 'center',
+  },
+  // Portrait styles
+  portraitSection: {
+    alignItems: 'center',
+    marginBottom: 20,
+    width: '100%',
+  },
+  portraitImage: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    borderWidth: 3,
+    borderColor: theme.colors.gold,
+    marginBottom: 12,
+  },
+  portraitPlaceholder: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: theme.colors.background,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  portraitPlaceholderText: {
+    fontSize: 48,
+  },
+  styleSelector: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  styleButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  styleButtonActive: {
+    borderColor: theme.colors.gold,
+    backgroundColor: 'rgba(247, 207, 70, 0.1)',
+  },
+  styleButtonText: {
+    fontSize: 18,
+  },
+  styleButtonTextActive: {
+    // Active text style if needed
+  },
+  generateButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  generateButtonText: {
+    fontFamily: 'Lato_700Bold',
+    fontSize: 14,
+    color: theme.colors.background,
   },
 });

@@ -3,7 +3,7 @@ import { z } from "zod";
 
 config();
 
-const isDev = process.env.NODE_ENV !== "production";
+const isDev = process.env['NODE_ENV'] !== "production";
 
 const environmentSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3333),

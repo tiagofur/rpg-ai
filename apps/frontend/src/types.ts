@@ -34,6 +34,9 @@ export interface Character {
         boots?: Item;
         weapon?: Item;
         shield?: Item;
+        amulet?: Item;
+        ring1?: Item;
+        ring2?: Item;
     };
 }
 

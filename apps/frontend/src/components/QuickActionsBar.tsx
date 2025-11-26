@@ -11,6 +11,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { COLORS, FONTS } from '../theme';
+import { useGameEffects } from '../hooks/useGameEffects';
 
 interface QuickAction {
   id: string;
@@ -88,6 +89,7 @@ export function QuickActionsBar({
   contextualActions,
 }: QuickActionsBarProps) {
   const scrollRef = useRef<ScrollView>(null);
+  const { playButtonPress, playMenuOpen } = useGameEffects();
 
   // Use contextual actions if provided, otherwise default
   const actions = contextualActions || DEFAULT_ACTIONS;
@@ -108,10 +110,13 @@ export function QuickActionsBar({
     if (disabled) return;
 
     if (action.command === '__inventory__') {
+      playMenuOpen();
       onOpenInventory();
     } else if (action.command === '__character__') {
+      playMenuOpen();
       onOpenCharacter();
     } else {
+      playButtonPress();
       onAction(action.command);
     }
   };

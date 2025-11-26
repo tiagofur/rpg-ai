@@ -1,7 +1,7 @@
-import { Redis } from 'ioredis';
 import { PrismaClient } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 import { GameEngine } from '../game/GameEngine.js';
+import { createRedisClient } from '../utils/redis.js';
 
 /**
  * Prueba del sistema de bloqueo de sesión y AI Gateway
@@ -11,7 +11,7 @@ async function testSessionLockAndAI() {
   console.log('🚀 Iniciando pruebas de sistema de bloqueo y AI...');
 
   // Configuración
-  const redis = new Redis({
+  const redis = await createRedisClient({
     host: process.env['REDIS_HOST'] || 'localhost',
     port: Number.parseInt(process.env['REDIS_PORT'] || '6379'),
     ...(process.env['REDIS_PASSWORD'] ? { password: process.env['REDIS_PASSWORD'] } : {})
@@ -53,7 +53,7 @@ async function testSessionLockAndAI() {
     console.log('🔒 Test 2: Probando bloqueo de sesión...');
 
     // Intentar ejecutar dos comandos simultáneos
-    const {sessionId} = session;
+    const { sessionId } = session;
 
     const promise1 = gameEngine.executeCommand(
       sessionId,

@@ -11,12 +11,562 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### 🚀 En Desarrollo Activo
 
-- Tests frontend (React Native Testing Library)
 - Sistema de tutoriales
 - Integración completa de generación de imágenes con IA
-- Performance tests
-- Paywall inteligente
-- RevenueCat SDK integration
+
+---
+
+## [0.1.18-alpha] - 2025-11-26 - Sprint 18: Backend Endpoints & Health Monitoring
+
+### ✨ Añadido
+
+#### Endpoint Listar Sesiones (B-004)
+
+- **GET `/api/session/list`** - Endpoint para listar sesiones del usuario
+  - Paginación cursor-based (eficiente para MongoDB)
+  - Query params: `ownerId`, `cursor`, `limit` (máx 50)
+  - Retorna: sesiones con `charactersCount`, ordenadas por fecha
+  - Validación con Zod schemas compartidos
+
+#### Health Check Detallado (B-033)
+
+- **Archivo `routes/health.ts`** con múltiples endpoints:
+  - `GET /api/health` - Check básico para load balancers
+  - `GET /api/health/detailed` - Estado de todos los servicios:
+    - Database (MongoDB via Prisma) - latencia y estado
+    - Redis - conexión y fallback detection
+    - Memoria del proceso (heap, rss, external)
+    - Uptime y versión
+  - `GET /api/health/ready` - Readiness check (Kubernetes)
+  - `GET /api/health/live` - Liveness check (Kubernetes)
+- **Status codes apropiados**:
+  - 200 OK - healthy/degraded
+  - 503 Service Unavailable - unhealthy (DB down)
+
+#### Logging Estructurado Producción (B-031)
+
+- **ProductionLogger** (`logging/ProductionLogger.ts`):
+  - Salida JSON estructurada para integración con ELK/Datadog/CloudWatch
+  - Niveles: DEBUG, INFO, WARN, ERROR, FATAL
+  - Incluye: timestamp, service, context, meta, error con stack trace
+  - Filtrado por nivel configurable
+  - Child loggers con bindings heredados
+
+- **LoggerFactory** para gestión centralizada:
+  - `createLogger(context)` - Logger base
+  - `createRequestLogger(requestId, userId)` - Para HTTP
+  - `createDatabaseLogger(operation)` - Para DB
+  - `createAILogger(model)` - Para servicios AI
+  - `createWebSocketLogger(sessionId, userId)` - Para WebSocket
+
+- **Módulo index.ts** con exports centralizados:
+  - `createLogger(context, env)` - Selector automático por entorno
+  - Producción: JSON estructurado
+  - Desarrollo: Console con formato legible
+
+#### Rate Limiting en Redis (B-030)
+
+- **ApiGateway completo** (`gateway/ApiGateway.ts`):
+  - Rate limiting global y por servicio con Redis
+  - Circuit breaker para servicios con auto-recovery
+  - Health checks detallados por servicio (auth, game, ai, session, analytics)
+  - Métricas de requests y tiempos de respuesta
+  - Fallback a memoria cuando Redis no está disponible
+  - Sincronización periódica de métricas
+
+- **Plugin Gateway** (`plugins/gateway.ts`):
+  - Integración con Fastify
+  - Middleware de seguridad (blacklist IPs, detección de requests sospechosos)
+  - Logging estructurado de requests/responses
+  - Métricas automáticas por request
+
+### 📊 Progreso
+
+- **Tareas completadas**: 77/81 (95%)
+- **Tests**: 167 frontend (11 suites)
+
+---
+
+## [0.1.17-alpha] - 2025-11-26 - Sprint 17: UI Polish & UX Improvements
+
+### ✨ Añadido
+
+#### Sonidos de Interfaz (F-055)
+
+- **Hook `useGameEffects` extendido** con nuevos tipos de sonido:
+  - `buttonPress` - Click de botón general
+  - `navigate` - Transiciones de pantalla
+  - `error` - Errores y validaciones fallidas
+  - `reward` - Recompensas y logros
+  - `notification` - Alertas y mensajes
+
+- **Funciones helper** para reproducción simplificada:
+  - `playButtonSound()` - Feedback para botones
+  - `playNavigationSound()` - Feedback de navegación
+  - `playErrorSound()` - Feedback de error
+  - `playRewardSound()` - Feedback de recompensa
+
+- **Integración en componentes**:
+  - `QuickActionsBar.tsx` - Sonido al presionar acciones rápidas
+  - `LoginScreen.tsx` - Sonidos en login exitoso/error y navegación
+
+#### Screen Shake Effect (F-056)
+
+- **Hook `useScreenShake`** (`hooks/useScreenShake.ts`):
+  - Efectos de temblor de pantalla para feedback visual
+  - Patrones predefinidos:
+    - `hit` - Golpe normal (horizontal, suave)
+    - `criticalHit` - Golpe crítico (ambos ejes, intenso)
+    - `explosion` - Explosión (ambos ejes, muy intenso)
+    - `earthquake` - Terremoto (largo, persistente)
+    - `death` - Muerte (vertical, dramático)
+    - `levelUp` - Subir nivel (sutil, celebratorio)
+  - Intensidades configurables: `light`, `medium`, `heavy`, `critical`
+  - Animaciones 60fps con react-native-reanimated
+  - Dirección configurable: horizontal, vertical, o ambos
+  - Callbacks `onShakeComplete`
+
+- **Integración en `GameScreen.tsx`**:
+  - Shake automático en combate (hit/criticalHit)
+  - Shake en eventos de muerte
+  - Shake en level up
+
+#### Pull to Refresh (F-057)
+
+- **RefreshControl integrado** en múltiples pantallas:
+  - `HomeScreen.tsx` - Actualizar lista de personajes (ya existía)
+  - `InventoryScreen.tsx` - Actualizar inventario del personaje
+  - `CharacterSheetScreen.tsx` - Actualizar stats del personaje
+- Colores consistentes usando `COLORS.primary`
+- Estados de loading separados usando `isRefetching` de React Query
+
+#### Empty States Diseñados (F-058)
+
+- **Componente `EmptyState`** (`components/ui/EmptyState.tsx`):
+  - 10 variantes predefinidas para diferentes contextos:
+    - `characters` - Sin personajes
+    - `sessions` - Sin sesiones de juego
+    - `inventory` - Inventario vacío
+    - `quests` - Sin misiones activas
+    - `achievements` - Sin logros
+    - `notifications` - Sin notificaciones
+    - `search` - Sin resultados de búsqueda
+    - `error` - Error genérico
+    - `offline` - Sin conexión
+    - `default` - Estado vacío genérico
+  - Personalización completa: icono, título, descripción
+  - Botón de acción opcional con callback
+  - 3 tamaños: small, medium, large
+  - Animaciones de entrada con react-native-reanimated
+  - Diseño consistente con el tema del juego
+
+- **Integración en `InventoryScreen.tsx`**:
+  - Reemplazó el empty state hardcodeado
+  - Usa variante `inventory` con acción para cerrar modal
+
+### 🧪 Tests
+
+- **Tests `useScreenShake.test.ts`**: 27 tests cubriendo todos los patrones e intensidades
+- **Tests `EmptyState.test.tsx`**: 27 tests cubriendo variantes, customización, acciones
+- **Tests actualizados**: LoginScreen y QuickActionsBar con SettingsProvider
+- **Total tests frontend**: 167 pasando (aumentó de 113)
+
+### 📊 Progreso
+
+- **Sprint 17 completado**: F-055 ✅, F-056 ✅, F-057 ✅, F-058 ✅
+- **Progreso total**: 69/81 tareas (85%)
+
+---
+
+## [0.1.15-alpha] - 2025-11-26 - Sprint 15: Legal & Store Compliance
+
+### ✨ Añadido
+
+#### Documentación Legal (S-001, S-002)
+
+- **Política de Privacidad** (`docs/legal/privacy-policy.md`, `privacy-policy-en.md`):
+  - Versiones completas en español e inglés
+  - Cumplimiento GDPR (Reglamento General de Protección de Datos)
+  - Cumplimiento CCPA (California Consumer Privacy Act)
+  - Cumplimiento COPPA (Children's Online Privacy Protection Act)
+  - Secciones detalladas:
+    - Datos que recopilamos (cuenta, juego, pago, técnicos)
+    - Cómo usamos los datos
+    - Compartición con terceros (Stripe, Google AI, RevenueCat)
+    - Seguridad de datos
+    - Retención de datos
+    - Derechos del usuario (acceso, rectificación, eliminación, portabilidad)
+    - Privacidad de menores
+    - Cookies y tecnologías similares
+    - Contacto del Responsable de Datos
+
+- **Términos de Servicio** (`docs/legal/terms-of-service.md`, `terms-of-service-en.md`):
+  - Versiones completas en español e inglés
+  - Definiciones claras de términos clave
+  - Requisitos de cuenta y elegibilidad
+  - Sistema de suscripciones y pagos:
+    - 4 planes (Free, Basic, Premium, Supreme)
+    - Renovación automática
+    - Política de cancelación
+    - Política de reembolso
+  - Contenido generado por IA (responsabilidad, limitaciones)
+  - Contenido del usuario y licencias
+  - Propiedad intelectual
+  - Conducta prohibida (16 categorías)
+  - Limitación de responsabilidad
+  - Indemnización
+  - Resolución de disputas
+  - Cláusulas de modificación y terminación
+
+- **README Legal** (`docs/legal/README.md`):
+  - Índice de documentos legales
+  - URLs públicas requeridas
+  - Requisitos por tienda (App Store, Play Store)
+  - Guía de integración en la app
+  - Checklist de próximos pasos
+  - Notas de revisión legal
+
+### 📊 Compliance
+
+- **App Store Connect Ready**: Política de privacidad en formato compatible
+- **Google Play Ready**: Data Safety section documentada
+- **International**: Documentos bilingües (ES/EN)
+- **Minor Protection**: Sección específica de menores de 13/16 años
+
+### 🔧 Técnico
+
+- URLs configuradas en SettingsScreen: `https://rpgai.app/privacy`, `https://rpgai.app/terms`
+- Estructura de carpetas `docs/legal/` creada
+- Versionado de documentos (v1.0, 26 Nov 2025)
+
+---
+
+## [0.1.16-alpha] - 2025-11-26 - Sprint 16: Character Portrait Generation
+
+### ✨ Añadido
+
+#### Generación de Retrato de Personaje (F-035)
+
+- **Endpoint Backend** `POST /api/character/generate-portrait`:
+  - Genera retratos de personaje usando IA (Pollinations.ai)
+  - Soporte para 5 estilos de arte:
+    - `realistic` - Fotorrealista, 8K, cinematográfico
+    - `anime` - Estilo anime, colores vibrantes
+    - `painterly` - Óleo clásico, estilo renacentista
+    - `pixel-art` - Pixel art 16-bit retro
+    - `comic` - Estilo cómic, líneas bold
+  - Prompts optimizados por raza y clase
+  - Autenticación requerida
+  - Schema validado con Zod
+
+- **Cliente API Frontend** (`api/character.ts`):
+  - `generatePortrait()` - Genera retrato con nombre, raza, clase y estilo
+  - Tipos `PortraitStyle` y `GeneratePortraitResponse`
+
+- **UI en CharacterCreationScreen**:
+  - Selector visual de estilo de arte (5 botones con emojis)
+  - Botón "🎭 Generar Retrato"
+  - Vista previa del retrato generado (imagen circular con borde dorado)
+  - Placeholder con iconos de raza/clase cuando no hay retrato
+  - Estados de loading con ActivityIndicator
+  - Manejo de errores
+
+### 🔧 Correcciones TypeScript
+
+- **CharacterSheetScreen.tsx**:
+  - Eliminados imports no usados (`Alert`, `useGameSession`)
+  - Corregido tipo `EquipmentSlotProps.item` para `exactOptionalPropertyTypes`
+
+- **InventoryScreen.tsx**:
+  - Eliminado import no usado (`Image`)
+
+- **RevenueCatService.ts**:
+  - Corregido `appUserID` para aceptar `null` en lugar de `undefined`
+  - Corregido tipo de retorno de `addCustomerInfoListener`
+
+- **types.ts**:
+  - Añadidos slots de equipamiento: `amulet`, `ring1`, `ring2`
+
+### 📊 Testing
+
+- **113 tests pasando** en frontend (9 test suites)
+- TypeScript sin errores en frontend
+
+---
+
+## [0.1.14-alpha] - 2025-11-26 - Sprint 14: Animations & Polish
+
+### ✨ Añadido
+
+#### Animación de Dados (F-027)
+
+- **Componente `DiceRollAnimation.tsx`**:
+  - Animación 3D de rotación de dados con react-native-reanimated
+  - Soporte para todos los tipos de dados: d4, d6, d8, d10, d12, d20, d100
+  - Efectos especiales para críticos (valor máximo) y pifia (valor 1)
+  - Flash dorado para críticos, rojo para pifias
+  - Shake animation al inicio del roll
+  - Haptic feedback integrado
+  - Props configurables: rollDuration, haptics, style
+
+- **Hook `useDiceRoll.ts`**:
+  - Estado completo para manejo de dados
+  - `rollDice(type, modifier)` - Genera resultado y muestra animación
+  - `showResult(result)` - Muestra resultado custom
+  - `hideDice()` - Oculta animación
+  - `onAnimationComplete` - Callback para auto-hide
+  - Soporte para modificadores (ej: d20+5)
+  - Detección de crítico/pifia solo para d20
+
+- **Tests unitarios** - 18 tests para useDiceRoll
+  - Tests de todos los tipos de dados
+  - Tests de modificadores
+  - Tests de críticos y pifias
+  - Tests de auto-hide
+
+#### Assets Gráficos (A-009, A-010)
+
+- **`logo.svg`** (512x512):
+  - Logo vectorial con escudo medieval + D20 + nodos IA
+  - Gradiente dorado (#f7cf46 → #ffd700 → #b8982f)
+  - Efecto glow para elementos principales
+  - Tipografía "RPG AI" con Cinzel font
+
+- **`app-icon.svg`** (1024x1024):
+  - Icono de app listo para exportar a PNG
+  - Compatible con iOS corners (180px radius)
+  - Grid pattern sutil en background
+  - Optimizado para legibilidad en tamaños pequeños
+
+- **`assets/README.md`**:
+  - Documentación completa de assets
+  - Guía de exportación SVG → PNG
+  - Paleta de colores del proyecto
+  - Requisitos de tiendas (App Store, Play Store)
+
+#### SettingsScreen (F-042)
+
+- **`SettingsScreen.tsx`** (497 líneas):
+  - Pantalla completa de configuración del usuario
+  - Sección Audio: toggles para Sonido, Música, Haptics
+  - Sección Notificaciones: toggle con solicitud de permisos
+  - Selector de idioma: Español / English con persistencia
+  - Sección Cuenta: Ver suscripción, Cerrar sesión, Eliminar cuenta
+  - Información de App: versión, Política de privacidad, Términos
+  - Animaciones de entrada con Reanimated
+  - Integración con SettingsContext, AuthContext, useIAP
+  - Navegación a SubscriptionScreen
+
+- **Traducciones i18n** (en.json, es.json):
+  - `settings.title`, `settings.audioSection`, `settings.sound`
+  - `settings.music`, `settings.haptics`, `settings.notifications`
+  - `settings.language`, `settings.accountSection`
+  - `settings.viewSubscription`, `settings.logout`, `settings.deleteAccount`
+  - `settings.deleteConfirmTitle`, `settings.deleteConfirmMessage`
+  - `settings.appInfoSection`, `settings.version`
+  - `settings.privacyPolicy`, `settings.termsOfService`
+
+#### Splash Screen (A-011)
+
+- **`splash.svg`** (512x512):
+  - Silueta de dragón centrada
+  - Efecto glow ambient
+  - Background con grid sutil
+  - Optimizado para velocidad de carga
+  - Listo para exportar a PNG 1284x2778 (App Store)
+
+#### SocketContext Provider (F-012)
+
+- **`SocketContext.tsx`** (290 líneas):
+  - Provider global para estado de WebSocket
+  - Auto-conexión cuando usuario autenticado
+  - Auto-desconexión al cerrar sesión
+  - Gestión de sesiones de juego (join/leave)
+  - Event subscriptions con cleanup automático
+  - Hooks selectores para rendimiento:
+    - `useSocket()` - Todo el contexto
+    - `useConnectionStatus()` - Solo estado de conexión
+    - `useGameSession()` - Estado de sesión actual
+    - `useGameActions()` - Acciones de juego
+
+- **Tests** - 23 tests unitarios:
+  - Auto-connect behavior
+  - Connection state management
+  - Game session lifecycle
+  - Event subscriptions/unsubscriptions
+  - Selector hooks
+
+#### RevenueCat Integration (M-005)
+
+- **`RevenueCatService.ts`**:
+  - Servicio singleton para gestión de compras in-app
+  - Soporte iOS App Store + Google Play Store
+  - Fallback a Stripe para web
+  - Entitlements: basic, premium, supreme
+  - Productos: monthly/yearly para cada tier
+  - Métodos: initialize, login, logout, getOfferings, purchasePackage
+  - Sincronización con backend via webhook
+  - Listener para actualizaciones de suscripción
+
+- **`useIAP.ts` mejorado**:
+  - Hook completo con estado de suscripción
+  - isLoading, isPurchasing, error states
+  - hasEntitlement() helper
+  - refreshCustomerInfo()
+  - Platform detection (web fallback)
+
+- **`docs/REVENUECAT_SETUP.md`**:
+  - Guía completa de configuración
+  - Setup App Store Connect + Google Play
+  - Configuración RevenueCat Dashboard
+  - Ejemplos de código
+  - Troubleshooting
+
+### 🔧 Mejorado
+
+- **theme.ts**: Añadido color `surface` a COLORS
+- Eliminadas importaciones de React no necesarias (React 17+)
+- Corregidos caracteres UTF-8 problemáticos (comillas tipográficas)
+
+### 📊 Testing
+
+- **113 tests pasando** en frontend (9 test suites)
+
+---
+
+## [0.1.13-alpha] - 2025-11-26 - Sprint 14: Audio & Monetization
+
+### ✨ Añadido
+
+#### Música Ambiental (A-007, A-008)
+
+- **Archivos de audio**:
+  - `ambient_exploration.mp3` - Música para exploración (placeholder)
+  - `ambient_combat.mp3` - Música para combate (placeholder)
+
+- **Hook `useBackgroundMusic.ts`**:
+  - Control de música con fade in/out
+  - Crossfade entre tracks
+  - Integración con SettingsContext (musicEnabled)
+  - Funciones: `playTrack`, `stopMusic`, `pauseMusic`, `resumeMusic`, `setVolume`
+  - Loop automático para música ambiental
+
+- **Tests unitarios** - 16 tests para useBackgroundMusic
+
+#### Paywall Inteligente (M-004)
+
+- **Componente `Paywall.tsx`**:
+  - Modal animado con blur background
+  - Triggers contextuales (ai_limit, image_limit, save_limit, etc.)
+  - Comparación de planes (Basic, Premium, Supreme)
+  - Toggle mensual/anual con descuento
+  - Mensajes personalizados según trigger
+  - Integración con Stripe
+
+- **Hook `useSmartPaywall.ts`**:
+  - Gestión inteligente de cuándo mostrar paywall
+  - Respeta cooldowns (24h para soft upsells)
+  - Límite de paywalls por sesión
+  - Tracking de acciones para milestones
+  - Funciones: `checkLimit`, `trySoftUpsell`, `trackAction`
+
+#### Indicador de Conexión (F-014)
+
+- **Componente `ConnectionIndicator.tsx`**:
+  - 3 variantes: minimal (dot), badge, full
+  - Animación de pulso en estado "connecting"
+  - Colores por estado (verde/amarillo/rojo)
+  - Integración con useSocketStatus
+  - Soporte para onPress (retry)
+
+### 🔧 Modificado
+
+- **SettingsContext.tsx**: Añadido `musicEnabled` y `toggleMusic`
+- **jest.setup.js**: Mocks expandidos para Audio (pause, stop, replay)
+- **generate-audio-placeholders.ps1**: Incluye ambient music tracks
+- **sounds/README.md**: Documentación actualizada con BGM
+
+### 🌐 Traducciones
+
+- `en.json` / `es.json`:
+  - `paywall.*` - Títulos y subtítulos contextuales
+  - `connection.*` - Estados de conexión
+  - `subscription.tier`, `subscription.upgrade`
+  - `usage.nearLimit`
+
+---
+
+## [0.1.12-alpha] - 2025-11-26 - Sprint 13: Testing Infrastructure
+
+### ✨ Añadido
+
+#### Frontend Testing (React Native Testing Library)
+
+- **Jest + jest-expo configuración completa**:
+  - `jest.config.js` con preset `jest-expo/ios`
+  - `jest.setup.js` con mocks para expo-haptics, expo-av, i18next
+  - `babel.config.js` con reanimated plugin
+  - Soporte pnpm monorepo
+
+- **56 tests unitarios** (`apps/frontend/src/__tests__/`):
+  - `Skeleton.test.tsx` - 9 tests (variants, props)
+  - `QuickActionsBar.test.tsx` - 10 tests (rendering, interactions, combat mode)
+  - `AIThinkingIndicator.test.tsx` - 8 tests (visibility, variants, animations)
+  - `LoginScreen.test.tsx` - 12 tests (rendering, validation, navigation)
+  - `useSocket.test.ts` - 7 tests (status, subscriptions)
+  - `useGameEffects.test.ts` - 10 tests (haptics, sounds, combat effects)
+
+- **Scripts de testing**:
+  - `pnpm test` - Ejecutar todos los tests
+  - `pnpm test:watch` - Modo watch
+  - `pnpm test:coverage` - Reporte de cobertura
+
+#### Performance Testing (k6)
+
+- **3 scripts de load testing** (`apps/backend/src/test/performance/`):
+  - `auth-load.js` - Tests de autenticación:
+    - Registro de usuarios
+    - Login con credenciales
+    - Acceso a perfil autenticado
+    - Métricas: login_duration, register_duration, error_rates
+  - `game-load.js` - Tests de juego:
+    - Creación de sesiones
+    - Envío de acciones
+    - Operaciones de personaje
+    - Métricas: session_creation_rate, action_duration, ai_response_time
+  - `websocket-load.js` - Tests de WebSocket:
+    - Conexiones simultáneas
+    - Handshake Socket.io
+    - Métricas: connection_time, message_latency
+
+- **Documentación k6** (`README.md`):
+  - Instalación para Windows/Mac/Linux
+  - Ejemplos de uso por script
+  - Thresholds configurados
+  - Integración CI/CD
+
+### 🔧 Modificado
+
+- **tsconfig.json** (frontend): Añadido tipo "jest"
+- **package.json** (frontend): Scripts test, test:watch, test:coverage
+
+### 📦 Nuevas Dependencias
+
+Frontend devDependencies:
+
+- `@testing-library/react-native` ^13.3.3
+- `@types/jest` ^29.5.14
+- `jest` ^29.7.0
+- `jest-expo` ^54.0.13
+- `react-test-renderer` 19.1.0
+
+### 🎯 Impacto
+
+- ✅ 56 tests unitarios frontend pasando
+- ✅ Cobertura de componentes UI principales
+- ✅ Cobertura de hooks críticos
+- ✅ Scripts k6 listos para CI/CD
+- ✅ Base sólida para TDD going forward
 
 ---
 

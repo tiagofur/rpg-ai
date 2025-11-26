@@ -10,6 +10,7 @@ import { registerSessionRoutes } from "./routes/session.js";
 import { registerCharacterRoutes } from "./routes/character.js";
 import { registerGameRoutes } from "./routes/game.js";
 import { registerAuthRoutes } from "./routes/auth.js";
+import { registerHealthRoutes } from "./routes/health.js";
 import { stripeRoutes } from "./routes/stripe.js";
 import { iapRoutes } from "./routes/iap.js";
 import { retentionRoutes } from "./routes/retention.js";
@@ -60,8 +61,6 @@ export async function buildServer() {
     timeWindow: "1 minute"
   });
 
-  fastify.get("/api/health", async () => ({ status: "ok" }));
-
   // Initialize services with Redis fallback
   const redis = await createRedisClient({
     host: environment.REDIS_HOST,
@@ -69,6 +68,9 @@ export async function buildServer() {
     ...(environment.REDIS_PASSWORD ? { password: environment.REDIS_PASSWORD } : {}),
     db: environment.REDIS_DB,
   });
+
+  // B-033: Register health check routes with Redis for detailed checks
+  await fastify.register(registerHealthRoutes, { redis });
 
   // Initialize Game Service
   const gameService = GameService.getInstance();

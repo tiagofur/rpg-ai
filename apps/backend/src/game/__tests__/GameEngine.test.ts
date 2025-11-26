@@ -23,6 +23,7 @@ describe('GameEngine', () => {
       sadd: vi.fn().mockResolvedValue(1),
       srem: vi.fn().mockResolvedValue(1),
       set: vi.fn().mockResolvedValue('OK'),
+      isConnected: vi.fn().mockReturnValue(true),
     } as any;
 
     mockPrisma = {
@@ -52,7 +53,7 @@ describe('GameEngine', () => {
     } as any;
 
     config = {
-      redis: mockRedis,
+      redis: mockRedis as any,
       prisma: mockPrisma,
       maxUndoStackSize: 10,
       maxEventHistorySize: 100,

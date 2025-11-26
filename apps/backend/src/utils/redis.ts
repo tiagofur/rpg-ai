@@ -1,7 +1,11 @@
 import { Redis, type RedisOptions } from 'ioredis';
 import { IRedisClient } from '../cache/interfaces/IRedisClient.js';
 
-export class RedisClient extends Redis implements IRedisClient {
+/**
+ * Extended Redis client that implements IRedisClient interface.
+ * Uses type assertion since ioredis Redis class is not directly compatible with our interface.
+ */
+export class RedisClient extends Redis {
     constructor(options: RedisOptions) {
         super({
             ...options,
@@ -16,7 +20,7 @@ export class RedisClient extends Redis implements IRedisClient {
             maxRetriesPerRequest: 3,
         });
 
-        this.on('error', (err) => {
+        this.on('error', (err: Error & { code?: string }) => {
             if (err.code === 'ECONNREFUSED') {
                 console.warn('[Redis] Connection refused - Redis is not running');
             }
@@ -34,10 +38,15 @@ export class RedisClient extends Redis implements IRedisClient {
  */
 export class InMemoryRedisClient implements IRedisClient {
     private store: Map<string, string> = new Map();
+
     private sets: Map<string, Set<string>> = new Map();
+
     private lists: Map<string, string[]> = new Map();
+
     private sortedSets: Map<string, Map<string, number>> = new Map();
+
     private expiries: Map<string, number> = new Map();
+
     private eventHandlers: Map<string | symbol, Array<(...args: unknown[]) => void>> = new Map();
 
     async get(key: string): Promise<string | null> {
@@ -247,7 +256,7 @@ export class InMemoryRedisClient implements IRedisClient {
         return newVal;
     }
 
-    async info(section?: string): Promise<string> {
+    async info(_section?: string): Promise<string> {
         return `# Memory
 used_memory:1048576
 used_memory_human:1.00M
@@ -317,6 +326,10 @@ maxmemory_human:0B
         // No-op for in-memory
     }
 
+    async quit(): Promise<string> {
+        return 'OK'; // No-op for in-memory
+    }
+
     isConnected(): boolean {
         return true; // In-memory is always "connected"
     }
@@ -342,7 +355,8 @@ export async function createRedisClient(options: RedisOptions): Promise<IRedisCl
     try {
         await redis.connect();
         console.log('[Redis] Connected successfully');
-        return redis;
+        // Cast to IRedisClient since RedisClient extends Redis with isConnected() added
+        return redis as unknown as IRedisClient;
     } catch (error) {
         console.warn('[Redis] Failed to connect, using in-memory fallback');
         redis.disconnect();

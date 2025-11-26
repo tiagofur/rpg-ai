@@ -235,15 +235,22 @@ El proyecto está optimizado para desarrollo en GitHub Codespaces:
 ### v1.0 — MVP Single Player (Q2 2025)
 
 - [x] Documentación completa
-- [ ] Esqueleto de aplicación React Native + Expo
-- [ ] Backend authoritative con resolución de acciones
-- [ ] Integración con LLM (IA-DJ básica)
-- [ ] Generación de imágenes para momentos clave
-- [ ] Creación de personaje conversacional
-- [ ] Sistema de resolución de acciones (RNG + atributos)
-- [ ] UI/UX "cara de juego" (HUD, animaciones, gestos)
-- [ ] Audio ambiente y SFX
+- [x] Esqueleto de aplicación React Native + Expo
+- [x] Backend authoritative con resolución de acciones
+- [x] Integración con LLM (IA-DJ básica)
+- [x] Generación de imágenes para momentos clave
+- [x] Creación de personaje conversacional
+- [x] Sistema de resolución de acciones (RNG + atributos)
+- [x] UI/UX "cara de juego" (HUD, animaciones, gestos)
+- [x] Audio ambiente y SFX
 - [ ] Builds para iOS, Android y Web
+
+### v1.1 — UI Enhancements Sprint (Completado)
+
+- [x] M7: UI de Equipamiento - Paperdoll con slots visuales
+- [x] M9: Mini-mapa Visual - Nodos conectados con estado de exploración
+- [x] M5: Sistema de Diálogos con NPCs - Typewriter, portrait, opciones con requisitos
+- [x] M6: Sistema de Magia UI - Grimorio con filtros por escuela, barra de maná animada
 
 ### v1.5 — Multijugador (Q3 2025)
 

@@ -2,7 +2,7 @@ import { ChainableCommander } from 'ioredis';
 
 export interface IRedisClient {
   get(key: string): Promise<string | null>;
-  set(key: string, value: string | number | Buffer, ttl?: number | string): Promise<string | null>;
+  set(key: string, value: string | number | Buffer, ...args: (string | number)[]): Promise<string | null>;
   setex(key: string, seconds: number, value: string): Promise<string>;
   del(key: string): Promise<number>;
   exists(key: string): Promise<number>;
@@ -22,6 +22,7 @@ export interface IRedisClient {
   disconnect(): void;
   connect(): Promise<void>;
   isConnected(): boolean;
+  quit(): Promise<string>;
   sadd(key: string, ...members: Array<string>): Promise<number>;
   srem(key: string, ...members: Array<string>): Promise<number>;
   sismember(key: string, member: string): Promise<number>;

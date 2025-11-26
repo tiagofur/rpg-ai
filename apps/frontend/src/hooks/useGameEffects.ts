@@ -8,15 +8,27 @@ import { useSettings } from '../context/SettingsContext';
 // Files located in: assets/sounds/*.mp3
 // To generate new placeholders: scripts/generate-audio-placeholders.ps1
 const SOUND_FILES: Record<string, number | undefined> = {
+    // Combat sounds
     click: require('../../assets/sounds/click.mp3'),
     attack: require('../../assets/sounds/attack.mp3'),
     hit: require('../../assets/sounds/hit.mp3'),
-    levelUp: require('../../assets/sounds/levelup.mp3'),
     death: require('../../assets/sounds/death.mp3'),
+    // Progress sounds
+    levelUp: require('../../assets/sounds/levelup.mp3'),
     success: require('../../assets/sounds/success.mp3'),
+    // UI sounds - mapped to existing files
+    buttonPress: require('../../assets/sounds/click.mp3'),
+    navigate: require('../../assets/sounds/click.mp3'),
+    error: require('../../assets/sounds/death.mp3'),
+    reward: require('../../assets/sounds/levelup.mp3'),
+    notification: require('../../assets/sounds/success.mp3'),
+    menuOpen: require('../../assets/sounds/click.mp3'),
+    menuClose: require('../../assets/sounds/click.mp3'),
 };
 
-type SoundName = 'click' | 'attack' | 'hit' | 'levelUp' | 'death' | 'success';
+type SoundName =
+    | 'click' | 'attack' | 'hit' | 'levelUp' | 'death' | 'success'
+    | 'buttonPress' | 'navigate' | 'error' | 'reward' | 'notification' | 'menuOpen' | 'menuClose';
 
 export const useGameEffects = () => {
     const { soundEnabled, hapticsEnabled } = useSettings();
@@ -103,9 +115,53 @@ export const useGameEffects = () => {
         }
     }, [playHaptic, playSound]);
 
+    // UI-specific sound+haptic combinations
+    const playButtonPress = useCallback(() => {
+        playHaptic('light');
+        void playSound('buttonPress');
+    }, [playHaptic, playSound]);
+
+    const playNavigate = useCallback(() => {
+        playHaptic('light');
+        void playSound('navigate');
+    }, [playHaptic, playSound]);
+
+    const playError = useCallback(() => {
+        playHaptic('error');
+        void playSound('error');
+    }, [playHaptic, playSound]);
+
+    const playSuccess = useCallback(() => {
+        playHaptic('success');
+        void playSound('success');
+    }, [playHaptic, playSound]);
+
+    const playReward = useCallback(() => {
+        playHaptic('success');
+        void playSound('reward');
+    }, [playHaptic, playSound]);
+
+    const playMenuOpen = useCallback(() => {
+        playHaptic('light');
+        void playSound('menuOpen');
+    }, [playHaptic, playSound]);
+
+    const playMenuClose = useCallback(() => {
+        playHaptic('light');
+        void playSound('menuClose');
+    }, [playHaptic, playSound]);
+
     return {
         playHaptic,
         playSound,
         playCombatEffect,
+        // UI helpers
+        playButtonPress,
+        playNavigate,
+        playError,
+        playSuccess,
+        playReward,
+        playMenuOpen,
+        playMenuClose,
     };
 };

@@ -3,9 +3,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface SettingsContextType {
   soundEnabled: boolean;
+  musicEnabled: boolean;
   hapticsEnabled: boolean;
   notificationsEnabled: boolean;
   toggleSound: (value: boolean) => void;
+  toggleMusic: (value: boolean) => void;
   toggleHaptics: (value: boolean) => void;
   toggleNotifications: (value: boolean) => void;
 }
@@ -14,6 +16,7 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [musicEnabled, setMusicEnabled] = useState(true);
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
@@ -22,10 +25,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const loadSettings = async () => {
       try {
         const storedSound = await AsyncStorage.getItem('settings_sound');
+        const storedMusic = await AsyncStorage.getItem('settings_music');
         const storedHaptics = await AsyncStorage.getItem('settings_haptics');
         const storedNotifs = await AsyncStorage.getItem('settings_notifications');
 
         if (storedSound !== null) setSoundEnabled(storedSound === 'true');
+        if (storedMusic !== null) setMusicEnabled(storedMusic === 'true');
         if (storedHaptics !== null) setHapticsEnabled(storedHaptics === 'true');
         if (storedNotifs !== null) setNotificationsEnabled(storedNotifs === 'true');
       } catch (error) {
@@ -39,6 +44,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const toggleSound = async (value: boolean) => {
     setSoundEnabled(value);
     await AsyncStorage.setItem('settings_sound', String(value));
+  };
+
+  const toggleMusic = async (value: boolean) => {
+    setMusicEnabled(value);
+    await AsyncStorage.setItem('settings_music', String(value));
   };
 
   const toggleHaptics = async (value: boolean) => {
@@ -55,9 +65,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     <SettingsContext.Provider
       value={{
         soundEnabled,
+        musicEnabled,
         hapticsEnabled,
         notificationsEnabled,
         toggleSound,
+        toggleMusic,
         toggleHaptics,
         toggleNotifications,
       }}

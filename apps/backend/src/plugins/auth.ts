@@ -1,14 +1,14 @@
 import fp from 'fastify-plugin';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
-import { Redis } from 'ioredis';
 import { AuthenticationService, ITokenPayload } from '../services/AuthenticationService.js';
 import { UserRole, ErrorCode, IAuthUser } from '../types/index.js';
+import { IRedisClient } from '../cache/interfaces/IRedisClient.js';
 
 export interface AuthPluginOptions {
   jwtSecret: string;
   jwtRefreshSecret: string;
-  redis: Redis;
+  redis: IRedisClient;
   prisma: PrismaClient;
   bcryptRounds?: number;
   maxLoginAttempts?: number;
@@ -110,7 +110,7 @@ function requireRole(minimumRole: UserRole) {
         error: ErrorCode.FORBIDDEN,
         message: 'Insufficient permissions'
       });
-      
+
     }
   };
 }
@@ -130,7 +130,7 @@ async function requireMFA(request: FastifyRequest, reply: FastifyReply): Promise
       error: ErrorCode.MFA_REQUIRED,
       message: 'Multi-factor authentication must be enabled'
     });
-    
+
   }
 }
 

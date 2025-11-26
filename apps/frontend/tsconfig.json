@@ -7,7 +7,7 @@
     "allowJs": true,
     "noEmit": true,
     "resolveJsonModule": true,
-    "types": ["react", "react-native"],
+    "types": ["react", "react-native", "jest"],
     "typeRoots": ["../../node_modules/@types", "./node_modules/@types"],
     "rootDir": "../../"
   },
