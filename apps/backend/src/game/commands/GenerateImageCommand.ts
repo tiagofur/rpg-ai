@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { BaseGameCommand } from './BaseGameCommand.js';
 import { IGameContext, ICommandResult, IGameLogEntry, INotification, CommandType, IValidationResult, ICommandCost, LogLevel } from '../interfaces.js';
-import { IAIService } from '../../ai/interfaces/IAIService.js';
+import { IAIService, AspectRatio, ImageStyle } from '../../ai/interfaces/IAIService.js';
 import { GameError } from '../../errors/GameError.js';
 import { ErrorCode } from '../../types/index.js';
 
@@ -62,13 +62,14 @@ export class GenerateImageCommand extends BaseGameCommand {
             const imageResult = await this.aiService.generateImage({
                 prompt: visualPrompt,
                 numberOfImages: 1,
-                aspectRatio: '16:9',
-                style: 'fantasy masterpiece, 8k, detailed, epic lighting'
+                aspectRatio: AspectRatio.PORTRAIT_16_9,
+                style: ImageStyle.CINEMATIC,
+                userId: context.userId
             });
 
             const logEntries: IGameLogEntry[] = [];
 
-            if (imageResult.images && imageResult.images.length > 0) {
+            if (imageResult.images && imageResult.images.length > 0 && imageResult.images[0]) {
                 logEntries.push({
                     id: uuidv4(),
                     timestamp: new Date().toISOString(),
@@ -76,7 +77,7 @@ export class GenerateImageCommand extends BaseGameCommand {
                     category: 'scene_image',
                     message: 'Visualizing scene...',
                     data: {
-                        imageUrl: imageResult.images[0].base64,
+                        imageUrl: imageResult.images[0].base64 || '',
                         prompt: visualPrompt
                     }
                 });

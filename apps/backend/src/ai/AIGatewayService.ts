@@ -1,5 +1,4 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { Redis } from 'ioredis';
 import * as crypto from 'node:crypto';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -26,6 +25,8 @@ import {
   HarmBlockThreshold
 } from './interfaces/IAIService.js';
 import { GameError, ErrorCode } from '../errors/GameError.js';
+import { InMemoryRedisClient } from '../utils/redis.js';
+import type { IRedisClient } from '../cache/interfaces/IRedisClient.js';
 
 /**
  * AI Gateway Service - Implementación con Google AI SDK
@@ -38,7 +39,7 @@ export class AIGatewayService implements IAIService {
 
   private readonly genAI: GoogleGenerativeAI;
 
-  private readonly redis: Redis;
+  private readonly redis: IRedisClient;
 
   private readonly config: IAIConfig;
 
@@ -46,7 +47,7 @@ export class AIGatewayService implements IAIService {
 
   private readonly startTime: number;
 
-  constructor(apiKey: string, redis?: Redis) {
+  constructor(apiKey: string, redis?: IRedisClient) {
     this.startTime = Date.now();
 
     // Configuración por defecto
@@ -63,7 +64,7 @@ export class AIGatewayService implements IAIService {
       safetySettings: this.getDefaultSafetySettings()
     };
 
-    this.redis = redis || new Redis();
+    this.redis = redis || new InMemoryRedisClient();
 
     // Inicializar Google AI SDK
     this.genAI = new GoogleGenerativeAI(apiKey);
@@ -126,6 +127,9 @@ export class AIGatewayService implements IAIService {
       // Guardar interacción en contexto
       if (parameters.context) {
         await this.saveInteraction(parameters.context, parameters.prompt, text, parameters.model || this.textModel);
+        if (parameters.context.userId) {
+          await this.trackUserUsage(parameters.context.userId, 'text', usage);
+        }
       }
 
       return {
@@ -206,6 +210,10 @@ export class AIGatewayService implements IAIService {
       };
 
       this.updateMetrics(true, latency, usage);
+
+      if (parameters.userId) {
+        await this.trackUserUsage(parameters.userId, 'image', usage);
+      }
 
       return {
         images: generatedImages,
@@ -681,6 +689,36 @@ Mandatos principales:
   }
 
   /**
+   * Rastrea el uso por usuario en Redis
+   */
+  private async trackUserUsage(userId: string, type: 'text' | 'image', usage?: IUsageMetrics): Promise<void> {
+    try {
+      const key = `usage:ai:${userId}`;
+      const pipeline = this.redis.pipeline();
+
+      // Incrementar contador de peticiones
+      pipeline.hincrby(key, 'requests', 1);
+
+      if (type === 'image') {
+        pipeline.hincrby(key, 'images', 1);
+      }
+
+      if (usage) {
+        pipeline.hincrby(key, 'tokens', usage.totalTokens);
+        if (usage.estimatedCost) {
+          // Redis no soporta floats en incrby, guardamos como string o multiplicamos
+          // Aquí simplemente no lo guardamos en Redis por ahora para simplificar
+        }
+      }
+
+      // Expirar en 30 días (mensual)
+      pipeline.expire(key, 60 * 60 * 24 * 30);
+
+      await pipeline.exec();
+    } catch (error) {
+      // Silently fail for metrics
+    }
+  }  /**
    * Construye prompt para generación de imagen
    */
   private buildImagePrompt(parameters: IImageGenerationParameters): string {
@@ -690,23 +728,7 @@ Mandatos principales:
       ` Aspect ratio: ${parameters.aspectRatio || '1:1'}`;
   }
 
-  /**
-   * Crea imagen placeholder (para desarrollo)
-   */
-  private createPlaceholderImage(aspectRatio: string, description: string, seed: number): string {
-    // En producción, aquí generaríamos la imagen real
-    // Por ahora, retornamos un SVG placeholder codificado en base64
-    const width = this.getWidthFromAspectRatio(aspectRatio);
-    const height = this.getHeightFromAspectRatio(aspectRatio);
 
-    const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">` +
-      `<rect width="100%" height="100%" fill="#2a2a2a"/>` +
-      `<text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#ffffff" font-family="Arial" font-size="16">` +
-      `AI Generated Image\n${description.slice(0, 50)}...\nSeed: ${seed}` +
-      `</text></svg>`;
-
-    return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
-  }
 
   /**
    * Obtiene ancho desde proporción

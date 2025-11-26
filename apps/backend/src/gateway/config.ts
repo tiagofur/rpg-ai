@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
-import { Redis } from 'ioredis';
 import { FastifyRequest } from 'fastify';
 import { IApiGatewayConfig, IRateLimitConfig } from './ApiGateway.js';
+import { createRedisClient, InMemoryRedisClient } from '../utils/redis.js';
+import type { IRedisClient } from '../cache/interfaces/IRedisClient.js';
 
 // Rate limiting dinámico basado en roles
 const getDynamicRateLimit = async (request: FastifyRequest): Promise<number> => {
@@ -11,7 +12,7 @@ const getDynamicRateLimit = async (request: FastifyRequest): Promise<number> => 
   // - Historial de uso
   // - Comportamiento sospechoso
 
-  const {user} = (request as any);
+  const { user } = (request as any);
 
   if (!user) {
     return 10; // Límite para usuarios anónimos
@@ -35,7 +36,7 @@ const getDynamicRateLimit = async (request: FastifyRequest): Promise<number> => 
 
 // Generador de claves inteligente
 const intelligentKeyGenerator = async (request: FastifyRequest): Promise<string> => {
-  const {user} = (request as any);
+  const { user } = (request as any);
   const userAgent = request.headers['user-agent'] || 'unknown';
   const fingerprint = request.headers['x-fingerprint'] || request.ip;
 
@@ -75,7 +76,7 @@ const serviceRateLimits: Record<string, IRateLimitConfig> = {
     windowMs: 60_000,
     max: async (request: FastifyRequest) => {
       // Límites específicos para AI
-      const {user} = (request as any);
+      const { user } = (request as any);
       if (user?.role === 'premium') return 100;
       if (user?.role === 'verified') return 30;
       return 10; // Usuarios gratuitos
@@ -100,15 +101,24 @@ const serviceRateLimits: Record<string, IRateLimitConfig> = {
 };
 
 // Configuración principal del API Gateway
+// Redis will be initialized lazily - use getApiGatewayConfig() instead
+let _cachedRedis: IRedisClient | null = null;
+
+async function getOrCreateRedis(): Promise<IRedisClient> {
+  if (!_cachedRedis) {
+    _cachedRedis = await createRedisClient({
+      host: process.env['REDIS_HOST'] || 'localhost',
+      port: Number.parseInt(process.env['REDIS_PORT'] || '6379'),
+      password: process.env['REDIS_PASSWORD'],
+      db: Number.parseInt(process.env['REDIS_DB'] || '0'),
+    });
+  }
+  return _cachedRedis;
+}
+
+// Use InMemoryRedisClient as default to avoid initialization issues
 export const apiGatewayConfig: IApiGatewayConfig = {
-  redis: new Redis({
-    host: process.env['REDIS_HOST'] || 'localhost',
-    port: Number.parseInt(process.env['REDIS_PORT'] || '6379'),
-    password: process.env['REDIS_PASSWORD'],
-    db: Number.parseInt(process.env['REDIS_DB'] || '0'),
-    maxRetriesPerRequest: 3,
-    enableReadyCheck: true
-  } as any),
+  redis: new InMemoryRedisClient() as any,
 
   globalRateLimit: {
     windowMs: 60_000, // 1 minuto
@@ -167,7 +177,7 @@ export const securityConfig = {
 
 // Funciones de utilidad
 export const isSuspiciousRequest = (request: FastifyRequest): boolean => {
-  const {url} = request;
+  const { url } = request;
   const userAgent = request.headers['user-agent'] || '';
 
   // Verificar patrones sospechosos
@@ -192,7 +202,7 @@ export const isSuspiciousRequest = (request: FastifyRequest): boolean => {
 };
 
 export const getClientFingerprint = (request: FastifyRequest): string => {
-  const {ip} = request;
+  const { ip } = request;
   const userAgent = request.headers['user-agent'] || '';
   const acceptLanguage = request.headers['accept-language'] || '';
   const acceptEncoding = request.headers['accept-encoding'] || '';

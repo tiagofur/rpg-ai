@@ -1,17 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, StyleSheet, ActivityIndicator, View } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { useFonts, Cinzel_700Bold } from '@expo-google-fonts/cinzel';
 import { Lato_400Regular, Lato_700Bold } from '@expo-google-fonts/lato';
+import { Audio } from 'expo-av';
 
 import './src/i18n';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { GameScreen } from './src/screens/GameScreen';
+import { LoginScreen } from './src/screens/LoginScreen';
+import { RegisterScreen } from './src/screens/RegisterScreen';
+import { CharacterCreationScreen } from './src/screens/CharacterCreationScreen';
+import { SubscriptionScreen } from './src/screens/SubscriptionScreen';
 import { useSubscription } from './src/hooks/useSubscription';
+import { useNotifications } from './src/hooks/useNotifications';
+import { retentionApi } from './src/api/retention';
+import type { Character } from './src/api/character';
+
+import { SettingsProvider } from './src/context/SettingsContext';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 
 const queryClient = new QueryClient();
+
+// Configure audio for iOS (plays in silent mode)
+async function configureAudio() {
+  try {
+    await Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: false,
+      shouldDuckAndroid: true,
+    });
+  } catch (error) {
+    // Audio configuration is non-critical, fail silently
+    console.warn('Failed to configure audio mode:', error);
+  }
+}
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -19,6 +44,11 @@ export default function App() {
     Lato_400Regular,
     Lato_700Bold,
   });
+
+  // Configure audio on app start
+  useEffect(() => {
+    void configureAudio();
+  }, []);
 
   if (!fontsLoaded) {
     return (
@@ -30,16 +60,55 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StripeContainer>
-        <SafeAreaView style={styles.safeArea}>
-          <RootNavigator />
-        </SafeAreaView>
-        <StatusBar style='light' />
-      </StripeContainer>
+      <AuthProvider>
+        <SettingsProvider>
+          <SafeAreaView style={styles.safeArea}>
+            <RootNavigator />
+          </SafeAreaView>
+          <StatusBar style='light' />
+        </SettingsProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
 
+function RootNavigator() {
+  const { isAuthenticated, isLoading, accessToken } = useAuth();
+
+  // Show loading screen while checking auth state
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size='large' color='#f7cf46' />
+      </View>
+    );
+  }
+
+  // Not authenticated - show auth screens
+  if (!isAuthenticated) {
+    return <AuthNavigator />;
+  }
+
+  // Authenticated - show main app with Stripe
+  return (
+    <StripeContainer>
+      <MainNavigator token={accessToken} />
+    </StripeContainer>
+  );
+}
+
+// Auth flow navigator (Login/Register)
+function AuthNavigator() {
+  const [screen, setScreen] = useState<'login' | 'register'>('login');
+
+  if (screen === 'register') {
+    return <RegisterScreen onNavigateToLogin={() => setScreen('login')} />;
+  }
+
+  return <LoginScreen onNavigateToRegister={() => setScreen('register')} />;
+}
+
+// Stripe provider wrapper
 function StripeContainer({ children }: { children: React.ReactNode }) {
   const { config } = useSubscription();
 
@@ -58,46 +127,93 @@ function StripeContainer({ children }: { children: React.ReactNode }) {
   );
 }
 
-function RootNavigator() {
-  const [currentSession, setCurrentSession] = useState<{ id: string; ownerId: string } | null>(
-    null
-  );
+// Main app navigator (Home/CharacterCreation/Game/Subscription)
+type AppScreen = 'home' | 'create-character' | 'game' | 'subscription';
+
+function MainNavigator({ token }: { token: string | null }) {
+  const { user } = useAuth();
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>('home');
+  const [currentSession, setCurrentSession] = useState<{
+    id: string;
+    ownerId: string;
+  } | null>(null);
   const [characterId, setCharacterId] = useState<string | null>(null);
+  const { expoPushToken } = useNotifications();
 
-  const handleSessionCreated = (sessionId: string, ownerId: string) => {
+  useEffect(() => {
+    if (token && expoPushToken) {
+      retentionApi.registerPushToken(expoPushToken, token).catch(() => {
+        // Silently fail - push notifications are not critical
+      });
+    }
+  }, [token, expoPushToken]);
+
+  const handleSessionCreated = (sessionId: string, ownerId: string, _token: string) => {
     setCurrentSession({ id: sessionId, ownerId });
-    // For MVP, we assume character creation happens or we pick a default one.
-    // Since we don't have character selection yet, let's assume the backend created one
-    // or we need to create one.
-    // Actually, HomeScreen creates a session. Does it create a character?
-    // The backend createSession creates a session.
-    // We need to create a character too.
-    // Let's update HomeScreen to create a character after session creation, or just pass a dummy ID if the backend handles it.
-    // But wait, the backend /start endpoint requires characterId.
+    // Go to character creation after session is created
+    setCurrentScreen('create-character');
+  };
 
-    // Let's assume for now we use a hardcoded character ID or fetch it.
-    // To make it work, let's fetch the session details to get the character ID.
-    // But we can't easily do that here without a hook.
+  const handleCharacterCreated = (createdCharacter: Character) => {
+    setCharacterId(createdCharacter.id);
+    setCurrentScreen('game');
+  };
 
-    // Let's just pass a placeholder and let the backend handle it or fail.
-    // Or better, let's update HomeScreen to create a character.
-
-    // For now, let's just set a dummy character ID so we can navigate.
-    setCharacterId('00000000-0000-0000-0000-000000000000');
+  const handleCancelCharacterCreation = () => {
+    setCurrentSession(null);
+    setCurrentScreen('home');
   };
 
   const handleExit = () => {
     setCurrentSession(null);
     setCharacterId(null);
+    setCurrentScreen('home');
   };
 
-  if (currentSession && characterId) {
+  const handleOpenSubscription = () => {
+    setCurrentScreen('subscription');
+  };
+
+  const handleCloseSubscription = () => {
+    setCurrentScreen('home');
+  };
+
+  // Subscription Screen
+  if (currentScreen === 'subscription') {
+    return <SubscriptionScreen onClose={handleCloseSubscription} />;
+  }
+
+  // Character Creation Screen
+  if (currentScreen === 'create-character' && currentSession && user) {
     return (
-      <GameScreen sessionId={currentSession.id} characterId={characterId} onExit={handleExit} />
+      <CharacterCreationScreen
+        sessionId={currentSession.id}
+        playerId={user.id}
+        onCharacterCreated={handleCharacterCreated}
+        onCancel={handleCancelCharacterCreation}
+      />
     );
   }
 
-  return <HomeScreen onSessionCreated={handleSessionCreated} />;
+  // Game Screen
+  if (currentScreen === 'game' && currentSession && characterId && token) {
+    return (
+      <GameScreen
+        sessionId={currentSession.id}
+        characterId={characterId}
+        token={token}
+        onExit={handleExit}
+      />
+    );
+  }
+
+  // Home Screen (default)
+  return (
+    <HomeScreen
+      onSessionCreated={handleSessionCreated}
+      onOpenSubscription={handleOpenSubscription}
+    />
+  );
 }
 
 const styles = StyleSheet.create({

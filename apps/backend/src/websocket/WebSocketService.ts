@@ -84,20 +84,26 @@ export class WebSocketService implements IWebSocketManager {
 
         // Unirse a sala personal
         await socket.join(`user:${userId}`);
-        await socket.join(`session:${sessionId}`);
-
-        // Unirse a la sala de ubicación actual del personaje (si existe)
-        try {
-            // Aquí necesitaríamos obtener el estado actual del juego para saber la ubicación
-            // Por ahora, asumimos que el cliente enviará un evento 'join_location' o similar
-            // O podemos consultar al GameService
-        } catch (error) {
-            this.logger.error(`Error joining initial rooms: ${error}`);
-        }
+        await socket.join(`auth_session:${sessionId}`); // Renamed to avoid confusion with game session
 
         // Manejar eventos
         socket.on('disconnect', () => {
             this.handleDisconnect(socket);
+        });
+
+        socket.on('join_game', async (gameSessionId: string) => {
+            // Verify user has access to this session? For now, just join.
+            await socket.join(`session:${gameSessionId}`);
+
+            if (!this.sessionSockets.has(gameSessionId)) {
+                this.sessionSockets.set(gameSessionId, new Set());
+            }
+            this.sessionSockets.get(gameSessionId)?.add(socket.id);
+
+            // Map socket to game session for cleanup
+            this.socketSession.set(socket.id, gameSessionId);
+
+            this.logger.info(`Socket ${socket.id} joined game session:${gameSessionId}`);
         });
 
         socket.on('player:action', async (payload, ack) => {

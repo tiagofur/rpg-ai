@@ -114,9 +114,16 @@ export interface Subscription extends BaseEntity {
   currentPeriodEnd: ISOTimestamp;
   cancelAtPeriodEnd: boolean;
   canceledAt: ISOTimestamp | null;
-  stripeSubscriptionId: string;
-  stripeCustomerId: string;
-  defaultPaymentMethod: string | null;
+
+  // Stripe
+  stripeSubscriptionId?: string | null;
+  stripeCustomerId?: string | null;
+  defaultPaymentMethod?: string | null;
+
+  // IAP
+  iapProvider?: 'apple' | 'google' | null;
+  iapTransactionId?: string | null;
+  iapOriginalTransactionId?: string | null;
 }
 
 /**

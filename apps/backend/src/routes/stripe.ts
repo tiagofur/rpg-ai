@@ -6,7 +6,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PremiumFeaturesService } from '../services/PremiumFeaturesService.js';
 import { AuthenticationService } from '../services/AuthenticationService.js';
-import { RedisClient } from '../utils/redis.js';
+import type { IRedisClient } from '../cache/interfaces/IRedisClient.js';
 import { AppError, ErrorCode } from '../utils/errors.js';
 import {
   SubscriptionPlan,
@@ -19,7 +19,7 @@ import { authenticate } from '../plugins/auth.js';
 export interface StripeRoutesOptions {
   premiumService: PremiumFeaturesService;
   authService: AuthenticationService;
-  redis: RedisClient;
+  redis: IRedisClient;
 }
 
 /**

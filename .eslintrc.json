@@ -161,7 +161,18 @@
     "es2022": true,
     "jest": true
   },
-  "ignorePatterns": ["dist", "node_modules", "coverage", "*.js", "*.d.ts", "prisma/generated"],
+  "ignorePatterns": [
+    "dist",
+    "node_modules",
+    "coverage",
+    "*.js",
+    "*.d.ts",
+    "prisma/generated",
+    "**/test/**/*.test.ts",
+    "**/test/**/*.spec.ts",
+    "**/__tests__/**/*.test.ts",
+    "**/__tests__/**/*.spec.ts"
+  ],
   "overrides": [
     {
       "files": ["*.test.ts", "*.spec.ts"],

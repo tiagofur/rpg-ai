@@ -1,5 +1,4 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Redis } from 'ioredis';
 import { PrismaClient } from '@prisma/client';
 import { EventEmitter } from 'node:events';
 import {
@@ -23,12 +22,13 @@ import { AIGatewayService } from '../ai/AIGatewayService.js';
 import { IAIService } from '../ai/interfaces/IAIService.js';
 import { createLocation, LOCATIONS } from './content/Locations.js';
 import { createEnemy } from './content/Enemies.js';
+import { IRedisClient } from '../cache/interfaces/IRedisClient.js';
 
 /**
  * Configuración del Game Engine
  */
 export interface IGameEngineConfig {
-  redis: Redis;
+  redis: IRedisClient;
   prisma: PrismaClient;
   maxUndoStackSize: number;
   maxEventHistorySize: number;
@@ -97,7 +97,7 @@ export interface IGameSettings {
 export class GameEngine extends EventEmitter {
   private readonly config: IGameEngineConfig;
 
-  private readonly redis: Redis;
+  private readonly redis: IRedisClient;
 
   private readonly prisma: PrismaClient;
 

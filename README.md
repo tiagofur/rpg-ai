@@ -1,34 +1,38 @@
-# RPG AI — TTRPG Narrativo Guiado por Inteligencia Artificial
+# 🎮 RPG-AI Supreme
 
-**Versión:** 0.3 (Especificación Técnica Definitiva)  
-**Stack Principal:** React Native + Expo + Node.js + TypeScript  
-**Estado:** Documentación completa — Listo para desarrollo
+> AI-powered text-based RPG with dynamic storytelling, procedural generation, and multiplayer features.
+
+[![E2E Tests](https://github.com/tiagofur/rpg-ai/actions/workflows/test.yml/badge.svg)](https://github.com/tiagofur/rpg-ai/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
 ## 🎯 Visión del Proyecto
 
-RPG AI es un juego de rol de mesa digital (TTRPG) donde la Inteligencia Artificial actúa como Director de Juego (DJ). No es un generador de historias ni un chatbot — es un **juego completo** con mecánicas reales, resolución de acciones basada en estadísticas, generación visual dinámica y una experiencia de usuario diseñada para sentirse como un videojuego premium, no como una aplicación de chat.
+RPG AI Supreme es un juego de rol narrativo donde la Inteligencia Artificial actúa como Director de Juego (DJ). Combina
+mecánicas tradicionales de TTRPG con generación procedural de contenido, arte dinámico mediante IA, y una experiencia
+multiplataforma premium.
 
-### Diferenciadores Clave
+### Características Principales
 
-- **Mecánicas de Juego Reales**: Sistema de resolución de acciones basado en atributos, habilidades y RNG reproducible (seedable).
-- **Interfaz de Juego Premium**: HUD, animaciones, gestos, efectos visuales — diseñado como un juego AAA mobile/desktop, no como una aplicación de mensajería.
-- **Narrativa Emergente Visual**: Cada momento importante genera arte conceptual mediante IA; la narrativa se presenta de forma cinemática.
-- **Multiplataforma Nativo**: Una única base de código para iOS, Android, Web y Desktop (Tauri/Electron).
-- **Experiencia Sin Preparación**: Sin necesidad de configurar campañas, preparar material o tener un DJ humano disponible.
+- **IA como Game Master**: GPT-4 genera narrativa dinámica y responde a acciones del jugador
+- **Sistema de Combate por Turnos**: Mecánicas D&D-like con dados, atributos y habilidades
+- **Generación de Arte**: DALL-E 3 crea ilustraciones de escenas y personajes
+- **Multiplataforma**: React Native (iOS, Android) + Web deployment
+- **Monetización Premium**: Freemium con Stripe + IAP
+- **Tiempo Real**: WebSocket para experiencias multiplayer y notificaciones
 
 ---
 
-## 📦 Stack Tecnológico (Decisión Final)
+## 📦 Stack Tecnológico
 
 ### Frontend — Aplicación del Juego
-- **React Native (Expo Managed Workflow)**: Framework principal para desarrollo multiplataforma.
-- **React Native Web**: Compilación a web sin modificaciones de código.
-- **TypeScript**: Lenguaje obligatorio para todo el proyecto.
-- **React Native Reanimated 2+**: Animaciones de alto rendimiento (60fps).
-- **React Native Skia**: Rendering 2D avanzado para HUD, efectos, mapas y elementos gráficos custom.
-- **React Native Gesture Handler**: Gestos nativos para interacciones táctiles fluidas.
+
+- **React Native (Expo)**: Framework principal multiplataforma
+- **TypeScript**: Lenguaje obligatorio para todo el código
+- **React Query**: State management y cache de API
+- **React Navigation**: Navegación nativa
+- **React Native Reanimated**: Animaciones de alto rendimiento (60fps)
 - **React Navigation**: Navegación y gestión de pantallas.
 - **Zustand / Redux Toolkit**: Estado global de la aplicación.
 - **Socket.io Client**: Comunicación en tiempo real con el servidor authoritative.
@@ -36,6 +40,7 @@ RPG AI es un juego de rol de mesa digital (TTRPG) donde la Inteligencia Artifici
 - **Lottie React Native**: Animaciones vectoriales para feedback visual.
 
 ### Backend — Servidor Authoritative
+
 - **Node.js + TypeScript**: Runtime y lenguaje.
 - **Fastify**: Framework HTTP de alto rendimiento.
 - **Socket.io**: WebSockets para estado en tiempo real y multijugador.
@@ -44,11 +49,13 @@ RPG AI es un juego de rol de mesa digital (TTRPG) donde la Inteligencia Artifici
 - **Bull / BullMQ**: Cola de trabajos para generación de imágenes y procesamiento asíncrono.
 
 ### AI & Generación de Contenido
+
 - **OpenAI GPT-4o / GPT-4.1**: LLM para la IA-DJ (narración, resolución, contexto).
 - **OpenAI DALL-E / Stable Diffusion API**: Generación de imágenes.
 - **Azure/Google TTS**: Text-to-Speech para narración de voz (opcional v2.0).
 
 ### Infraestructura & DevOps
+
 - **GitHub Codespaces**: Entorno de desarrollo principal en la nube.
 - **Expo EAS Build**: Builds nativos en la nube (iOS/Android).
 - **Expo EAS Submit**: Publicación automatizada a App Store / Play Store.
@@ -58,6 +65,7 @@ RPG AI es un juego de rol de mesa digital (TTRPG) donde la Inteligencia Artifici
 - **Sentry**: Observabilidad y error tracking.
 
 ### Testing & Calidad
+
 - **Jest / Vitest**: Tests unitarios.
 - **Detox**: Tests E2E para React Native.
 - **Playwright**: Tests E2E para web.
@@ -110,13 +118,15 @@ rpg-ai/
 ## 🚀 Inicio Rápido
 
 ### Requisitos Previos
-- Node.js 20+ 
+
+- Node.js 20+
 - pnpm (obligatorio - versión 9.12.0)
 - MongoDB (local o MongoDB Atlas)
 - Cuenta de Expo (gratuita, opcional)
 - GitHub Codespaces habilitado (opcional pero recomendado)
 
-> **Nota**: Este proyecto usa pnpm workspaces. El soporte para yarn está planificado pero actualmente solo pnpm está completamente soportado.
+> **Nota**: Este proyecto usa pnpm workspaces. El soporte para yarn está planificado pero actualmente solo pnpm está
+> completamente soportado.
 
 ### Desarrollo Local
 
@@ -167,13 +177,15 @@ pnpm dev:backend
 pnpm dev:frontend:web
 ```
 
-**📖 Ver más**: [docs/DEVELOPMENT_SETUP.md](docs/DEVELOPMENT_SETUP.md) y [docs/ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md)
+**📖 Ver más**: [docs/DEVELOPMENT_SETUP.md](docs/DEVELOPMENT_SETUP.md) y
+[docs/ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md)
 
 ---
 
 ## 📚 Documentación Completa
 
 ### Para Desarrolladores
+
 - **[Development Setup Guide](docs/DEVELOPMENT_SETUP.md)**: Guía completa de configuración del entorno de desarrollo.
 - **[Environment Variables](docs/ENVIRONMENT_VARIABLES.md)**: Documentación de variables de entorno.
 - **[Game Design Document (GDD)](docs/GDD.md)**: Diseño completo del juego, mecánicas, pilares y visión.
@@ -184,6 +196,7 @@ pnpm dev:frontend:web
 - **[Especificación IA-DJ](docs/AI_DJ_SPEC.md)**: Comportamiento, prompts y lógica del Director de Juego.
 
 ### Para Colaboradores
+
 - **[CONTRIBUTING.md](CONTRIBUTING.md)**: Guía para contribuir al proyecto.
 - **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)**: Código de conducta de la comunidad.
 
@@ -193,12 +206,17 @@ pnpm dev:frontend:web
 
 ### No es un Chat — Es un Juego
 
-Este proyecto rechaza explícitamente el paradigma de "chat con IA". Cada decisión técnica y de diseño está orientada a crear una experiencia que se sienta como un videojuego profesional:
+Este proyecto rechaza explícitamente el paradigma de "chat con IA". Cada decisión técnica y de diseño está orientada a
+crear una experiencia que se sienta como un videojuego profesional:
 
-- **Entrada de Usuario**: Aunque soporta texto libre, la interfaz principal usa botones de acción contextuales, menús radiales, gestos táctiles y selección directa en la escena.
-- **Narrativa Visual**: La narración del DJ se presenta como subtítulos cinemáticos con tipografía de juego, efectos de máquina de escribir, fondos semitransparentes y sincronización con imágenes generadas.
-- **Feedback Inmediato**: Cada acción produce feedback visual/audio instantáneo — partículas, shakes, flashes, sonidos — antes de que la IA responda.
-- **HUD Siempre Presente**: Barras de estado, minimapa, inventario visual, retratos de personajes — todo visible como en un RPG tradicional.
+- **Entrada de Usuario**: Aunque soporta texto libre, la interfaz principal usa botones de acción contextuales, menús
+  radiales, gestos táctiles y selección directa en la escena.
+- **Narrativa Visual**: La narración del DJ se presenta como subtítulos cinemáticos con tipografía de juego, efectos de
+  máquina de escribir, fondos semitransparentes y sincronización con imágenes generadas.
+- **Feedback Inmediato**: Cada acción produce feedback visual/audio instantáneo — partículas, shakes, flashes, sonidos —
+  antes de que la IA responda.
+- **HUD Siempre Presente**: Barras de estado, minimapa, inventario visual, retratos de personajes — todo visible como en
+  un RPG tradicional.
 - **Transiciones Cinematográficas**: Cambios de escena con fades, zooms, parallax y efectos de cámara.
 
 ### Desarrollo Cloud-First
@@ -215,6 +233,7 @@ El proyecto está optimizado para desarrollo en GitHub Codespaces:
 ## 🛣️ Roadmap
 
 ### v1.0 — MVP Single Player (Q2 2025)
+
 - [x] Documentación completa
 - [ ] Esqueleto de aplicación React Native + Expo
 - [ ] Backend authoritative con resolución de acciones
@@ -227,6 +246,7 @@ El proyecto está optimizado para desarrollo en GitHub Codespaces:
 - [ ] Builds para iOS, Android y Web
 
 ### v1.5 — Multijugador (Q3 2025)
+
 - [ ] Sistema de salas (1-4 jugadores)
 - [ ] Sincronización de estado en tiempo real
 - [ ] Gestión de turnos
@@ -234,6 +254,7 @@ El proyecto está optimizado para desarrollo en GitHub Codespaces:
 - [ ] Privacidad en creación de personajes
 
 ### v2.0 — RPG Completo (Q4 2025)
+
 - [ ] Hojas de personaje completas y editables
 - [ ] Sistema de progresión y nivelación
 - [ ] Guardado persistente de campañas
@@ -248,6 +269,7 @@ El proyecto está optimizado para desarrollo en GitHub Codespaces:
 ## 🤝 Contribuir
 
 Este proyecto está en fase de desarrollo activo y acepta contribuciones. Por favor lee:
+
 - [CONTRIBUTING.md](CONTRIBUTING.md) antes de abrir PRs
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) para entender el sistema
 - Todas las contribuciones deben incluir tests y seguir las guías de estilo

@@ -6,25 +6,81 @@ import {
   TouchableOpacity,
   View,
   Alert,
+  Platform,
 } from 'react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { CardField, useStripe } from '@stripe/stripe-react-native';
 import { useSubscription, Plan } from '../hooks/useSubscription';
+import { useIAP } from '../hooks/useIAP';
+import { useGameEffects } from '../hooks/useGameEffects';
 import { COLORS, FONTS } from '../theme';
 
 interface SubscriptionScreenProps {
   onClose: () => void;
 }
 
+const MOCK_PLANS: Plan[] = [
+  {
+    id: 'pro_monthly',
+    name: 'Hero Tier',
+    description: 'Unlock the full potential of your journey.',
+    pricing: { monthly: 4.99, yearly: 49.99 },
+    features: [
+      'Unlimited Energy',
+      'Exclusive Daily Rewards',
+      'Custom Character Avatar',
+      'Guild Creation Access',
+    ],
+  },
+  {
+    id: 'legend_monthly',
+    name: 'Legend Tier',
+    description: 'Become a legend with ultimate power.',
+    pricing: { monthly: 9.99, yearly: 99.99 },
+    features: ['All Hero Features', '2x XP Gain', 'Legendary Starter Item', 'Priority Support'],
+  },
+];
+
 export function SubscriptionScreen({ onClose }: SubscriptionScreenProps) {
   const { t } = useTranslation();
+  const isMobile = Platform.OS === 'ios' || Platform.OS === 'android';
+  const { playSound, playHaptic } = useGameEffects();
+
+  // IAP Hooks
+  const { packages, isPurchasing: isIAPPurchasing, purchasePackage, restorePurchases } = useIAP();
+
+  // Stripe Hooks (Web)
   const { config, subscription, createSubscription } = useSubscription();
   const { createPaymentMethod, confirmPayment } = useStripe();
   const [cardDetailsComplete, setCardDetailsComplete] = useState(false);
 
-  const handleSubscribe = async (planId: string) => {
+  useEffect(() => {
+    playSound('click'); // Play a sound when opening
+  }, []);
+
+  const handleClose = () => {
+    playHaptic('light');
+    playSound('click');
+    onClose();
+  };
+
+  const handleIAPPurchase = async (pack: any) => {
+    playHaptic('light');
+    playSound('click');
+    const success = await purchasePackage(pack);
+    if (success) {
+      playSound('success');
+      Alert.alert(t('subscription.success'), t('subscription.successMessage'));
+      onClose();
+    }
+  };
+
+  const handleStripeSubscribe = async (planId: string) => {
+    playHaptic('light');
+    playSound('click');
+
     if (!cardDetailsComplete) {
       Alert.alert(t('common.error'), t('subscription.enterCardDetails'));
       return;
@@ -56,9 +112,11 @@ export function SubscriptionScreen({ onClose }: SubscriptionScreenProps) {
             if (confirmError) {
               Alert.alert(t('common.error'), confirmError.message);
             } else {
+              playSound('success');
               Alert.alert(t('subscription.success'), t('subscription.successMessage'));
             }
           } else {
+            playSound('success');
             Alert.alert(t('subscription.success'), t('subscription.successMessage'));
           }
         },
@@ -69,7 +127,20 @@ export function SubscriptionScreen({ onClose }: SubscriptionScreenProps) {
     );
   };
 
-  if (config.isLoading || subscription.isLoading) {
+  // Use mock plans if config is not available or empty (for development/demo)
+  const displayPlans =
+    config.data?.availablePlans && config.data.availablePlans.length > 0
+      ? config.data.availablePlans
+      : MOCK_PLANS;
+
+  // Only show loading if we are actually fetching and not just falling back to mock
+  const isLoading =
+    !isMobile &&
+    (config.isLoading || subscription.isLoading) &&
+    !config.data?.availablePlans &&
+    !config.error;
+
+  if (isLoading || (isMobile && isIAPPurchasing)) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size='large' color='#f7cf46' />
@@ -83,7 +154,7 @@ export function SubscriptionScreen({ onClose }: SubscriptionScreenProps) {
     <LinearGradient colors={[COLORS.background, '#1a1a2e']} style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('game.premium')}</Text>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+        <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
           <Text style={styles.closeButtonText}>✕</Text>
         </TouchableOpacity>
       </View>
@@ -91,83 +162,159 @@ export function SubscriptionScreen({ onClose }: SubscriptionScreenProps) {
       <ScrollView style={styles.content}>
         <Text style={styles.subtitle}>{t('subscription.chooseDestiny')}</Text>
 
-        {!currentPlanId && (
-          <View style={styles.cardSection}>
-            <Text style={styles.sectionTitle}>{t('subscription.paymentDetails')}</Text>
-            <CardField
-              postalCodeEnabled={false}
-              style={styles.cardField}
-              cardStyle={{
-                backgroundColor: '#FFFFFF',
-                textColor: '#000000',
+        {/* Mobile IAP UI */}
+        {isMobile && (
+          <View>
+            {packages.length > 0 ? (
+              packages.map((pack) => (
+                <TouchableOpacity
+                  key={pack.identifier}
+                  style={styles.planCard}
+                  onPress={() => handleIAPPurchase(pack)}
+                  disabled={isIAPPurchasing}
+                >
+                  <LinearGradient
+                    colors={['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)']}
+                    style={styles.cardGradient}
+                  >
+                    <Text style={styles.planName}>{pack.product.title}</Text>
+                    <Text style={styles.planPrice}>{pack.product.priceString}</Text>
+                    <Text style={styles.planDescription}>{pack.product.description}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ))
+            ) : (
+              // Fallback for Mobile if no packages (e.g. simulator)
+              <View>
+                <Text style={{ color: COLORS.textDim, textAlign: 'center', marginBottom: 20 }}>
+                  (Development Mode: No IAP packages found. Showing Mock Plans)
+                </Text>
+                {MOCK_PLANS.map((plan) => (
+                  <TouchableOpacity
+                    key={plan.id}
+                    style={styles.planCard}
+                    onPress={() => {
+                      playHaptic('light');
+                      playSound('click');
+                      Alert.alert('Demo Purchase', `You selected ${plan.name}`);
+                    }}
+                  >
+                    <LinearGradient
+                      colors={['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)']}
+                      style={styles.cardGradient}
+                    >
+                      <Text style={styles.planName}>{plan.name}</Text>
+                      <Text style={styles.planPrice}>${plan.pricing.monthly}</Text>
+                      <Text style={styles.planDescription}>{plan.description}</Text>
+                      <View style={styles.featuresList}>
+                        {plan.features.map((feature, index) => (
+                          <Text key={index} style={styles.featureItem}>
+                            • {feature}
+                          </Text>
+                        ))}
+                      </View>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={styles.restoreButton}
+              onPress={() => {
+                playHaptic('light');
+                playSound('click');
+                restorePurchases();
               }}
-              onCardChange={(cardDetails) => {
-                setCardDetailsComplete(cardDetails.complete);
-              }}
-            />
+              disabled={isIAPPurchasing}
+            >
+              <Text style={styles.restoreText}>{t('subscription.restore')}</Text>
+            </TouchableOpacity>
           </View>
         )}
 
-        {config.data?.availablePlans.map((plan: Plan) => {
-          const isActive = currentPlanId === plan.id;
-          return (
-            <LinearGradient
-              key={plan.id}
-              colors={
-                isActive
-                  ? ['rgba(247, 207, 70, 0.15)', 'rgba(247, 207, 70, 0.05)']
-                  : ['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)']
-              }
-              style={[styles.planCard, isActive && styles.activePlanCard]}
-            >
-              <View style={styles.planHeader}>
-                <Text style={styles.planName}>{plan.name}</Text>
-                {isActive && (
-                  <LinearGradient
-                    colors={[COLORS.primary, '#ffd700']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.activeBadge}
-                  >
-                    <Text style={styles.activeBadgeText}>{t('subscription.active')}</Text>
-                  </LinearGradient>
-                )}
+        {/* Web Stripe UI */}
+        {!isMobile && (
+          <View>
+            {!currentPlanId && (
+              <View style={styles.cardSection}>
+                <Text style={styles.sectionTitle}>{t('subscription.paymentDetails')}</Text>
+                <CardField
+                  postalCodeEnabled={false}
+                  style={styles.cardField}
+                  cardStyle={{
+                    backgroundColor: '#FFFFFF',
+                    textColor: '#000000',
+                  }}
+                  onCardChange={(cardDetails) => {
+                    setCardDetailsComplete(cardDetails.complete);
+                  }}
+                />
               </View>
+            )}
 
-              <Text style={styles.planPrice}>
-                ${plan.pricing.monthly}/{t('subscription.month')}
-              </Text>
-              <Text style={styles.planDescription}>{plan.description}</Text>
-
-              <View style={styles.featuresList}>
-                {plan.features.map((feature, index) => (
-                  <Text key={index} style={styles.featureItem}>
-                    • {feature}
-                  </Text>
-                ))}
-              </View>
-
-              {!isActive && (
-                <TouchableOpacity
-                  style={[
-                    styles.subscribeButton,
-                    !cardDetailsComplete && !currentPlanId && styles.disabledButton,
-                  ]}
-                  onPress={() => handleSubscribe(plan.id)}
-                  disabled={
-                    createSubscription.isPending || (!cardDetailsComplete && !currentPlanId)
+            {displayPlans.map((plan: Plan) => {
+              const isActive = currentPlanId === plan.id;
+              return (
+                <LinearGradient
+                  key={plan.id}
+                  colors={
+                    isActive
+                      ? ['rgba(247, 207, 70, 0.15)', 'rgba(247, 207, 70, 0.05)']
+                      : ['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)']
                   }
+                  style={[styles.planCard, isActive && styles.activePlanCard]}
                 >
-                  <Text style={styles.subscribeButtonText}>
-                    {createSubscription.isPending
-                      ? t('common.loading')
-                      : t('subscription.subscribe')}
+                  <View style={styles.planHeader}>
+                    <Text style={styles.planName}>{plan.name}</Text>
+                    {isActive && (
+                      <LinearGradient
+                        colors={[COLORS.primary, '#ffd700']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.activeBadge}
+                      >
+                        <Text style={styles.activeBadgeText}>{t('subscription.active')}</Text>
+                      </LinearGradient>
+                    )}
+                  </View>
+
+                  <Text style={styles.planPrice}>
+                    ${plan.pricing.monthly}/{t('subscription.month')}
                   </Text>
-                </TouchableOpacity>
-              )}
-            </LinearGradient>
-          );
-        })}
+                  <Text style={styles.planDescription}>{plan.description}</Text>
+
+                  <View style={styles.featuresList}>
+                    {plan.features.map((feature, index) => (
+                      <Text key={index} style={styles.featureItem}>
+                        • {feature}
+                      </Text>
+                    ))}
+                  </View>
+
+                  {!isActive && (
+                    <TouchableOpacity
+                      style={[
+                        styles.subscribeButton,
+                        !cardDetailsComplete && !currentPlanId && styles.disabledButton,
+                      ]}
+                      onPress={() => handleStripeSubscribe(plan.id)}
+                      disabled={
+                        createSubscription.isPending || (!cardDetailsComplete && !currentPlanId)
+                      }
+                    >
+                      <Text style={styles.subscribeButtonText}>
+                        {createSubscription.isPending
+                          ? t('common.loading')
+                          : t('subscription.subscribe')}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </LinearGradient>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
     </LinearGradient>
   );
@@ -308,5 +455,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textTransform: 'uppercase',
     letterSpacing: 1,
+  },
+  cardGradient: {
+    padding: 16,
+    borderRadius: 12,
+  },
+  restoreButton: {
+    marginTop: 20,
+    padding: 12,
+    alignItems: 'center',
+  },
+  restoreText: {
+    color: COLORS.textDim,
+    fontFamily: FONTS.body,
+    fontSize: 14,
+    textDecorationLine: 'underline',
   },
 });

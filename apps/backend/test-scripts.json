@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "test:unit": "vitest run src/**/*.test.ts --exclude src/test/e2e/**",
+    "test:ui": "vitest --ui"
+  }
+}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -6,25 +6,69 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCreateSession } from '../hooks/useCreateSession';
-import { COLORS, FONTS } from '../theme';
+import { useAuth } from '../context/AuthContext';
+import { characterApi, type Character } from '../api/character';
+import { UsageLimits, type UsageLimitData } from '../components/UsageLimits';
+import { FadeIn, SlideIn } from '../components/animations';
+import { COLORS, FONTS, theme } from '../theme';
 
 interface HomeScreenProps {
-  onSessionCreated: (sessionId: string, ownerId: string) => void;
+  onSessionCreated: (sessionId: string, ownerId: string, token: string) => void;
+  onCharacterSelected?: (character: Character, sessionId: string) => void;
+  onOpenSubscription?: () => void;
 }
 
-const DEFAULT_OWNER_ID = '00000000-0000-4000-8000-000000000000';
-const UUID_REGEX = /^[\da-f]{8}-[\da-f]{4}-[1-5][\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i;
-
-export function HomeScreen({ onSessionCreated }: HomeScreenProps) {
-  const [ownerId, setOwnerId] = useState(DEFAULT_OWNER_ID);
+export function HomeScreen({ onSessionCreated, onOpenSubscription }: HomeScreenProps) {
+  const { user, accessToken, logout } = useAuth();
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Character list state
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [isLoadingCharacters, setIsLoadingCharacters] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Usage limits (mock data - en producción vienen del backend)
+  const [usageLimits] = useState<UsageLimitData[]>([
+    { feature: 'AI Requests', current: 45, limit: 100, icon: '🧠' },
+    { feature: 'Images', current: 3, limit: 10, icon: '🖼️' },
+    { feature: 'Saved Games', current: 1, limit: 3, icon: '💾' },
+    { feature: 'Characters', current: characters.length, limit: 1, icon: '🧙' },
+  ]);
+  const [userPlan] = useState<'free' | 'basic' | 'premium' | 'supreme'>('free');
+
   const createSession = useCreateSession();
+
+  // Load user's characters
+  const loadCharacters = async () => {
+    try {
+      const response = await characterApi.listMyCharacters();
+      setCharacters(response.characters);
+    } catch {
+      // Silently fail - characters list is not critical
+      setCharacters([]);
+    } finally {
+      setIsLoadingCharacters(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (accessToken) {
+      loadCharacters();
+    }
+  }, [accessToken]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadCharacters();
+  };
 
   const handleCreateSession = async () => {
     if (!title.trim()) {
@@ -32,21 +76,21 @@ export function HomeScreen({ onSessionCreated }: HomeScreenProps) {
       return;
     }
 
-    if (!UUID_REGEX.test(ownerId.trim())) {
-      setErrorMessage('ownerId debe ser un UUID válido.');
+    if (!user || !accessToken) {
+      setErrorMessage('Debes iniciar sesión primero.');
       return;
     }
 
     setErrorMessage(null);
+
     try {
       const result = await createSession.mutateAsync({
-        ownerId: ownerId.trim(),
+        ownerId: user.id,
         title: title.trim(),
         summary: summary.trim() || undefined,
       });
 
-      // Notify parent
-      onSessionCreated(result.session.id, ownerId.trim());
+      onSessionCreated(result.session.id, user.id, accessToken);
 
       setTitle('');
       setSummary('');
@@ -56,56 +100,129 @@ export function HomeScreen({ onSessionCreated }: HomeScreenProps) {
     }
   };
 
+  const handleLogout = async () => {
+    await logout();
+  };
+
   return (
     <LinearGradient colors={[COLORS.background, '#1a1a2e']} style={styles.container}>
-      <View style={styles.heroSection}>
-        <Text style={styles.gameTitle}>RPG AI SUPREME</Text>
-        <Text style={styles.gameSubtitle}>Infinite Worlds. Infinite Stories.</Text>
-      </View>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.primary}
+          />
+        }
+      >
+        {/* User Header */}
+        <View style={styles.userHeader}>
+          <View style={styles.userInfo}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {user?.username?.charAt(0).toUpperCase() ?? '?'}
+              </Text>
+            </View>
+            <View>
+              <Text style={styles.welcomeText}>¡Bienvenido!</Text>
+              <Text style={styles.usernameText}>{user?.username ?? 'Aventurero'}</Text>
+            </View>
+          </View>
+          <View style={styles.headerButtons}>
+            {onOpenSubscription && (
+              <TouchableOpacity style={styles.premiumButton} onPress={onOpenSubscription}>
+                <Text style={styles.premiumButtonText}>⭐ Premium</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Text style={styles.logoutText}>Salir</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-      <View style={styles.sessionPanel}>
-        <Text style={styles.panelTitle}>Start New Adventure</Text>
-        <TextInput
-          value={ownerId}
-          onChangeText={setOwnerId}
-          placeholder='Player ID (UUID)'
-          placeholderTextColor={COLORS.textDim}
-          style={styles.input}
-          autoCapitalize='none'
-          autoCorrect={false}
-        />
-        <TextInput
-          value={title}
-          onChangeText={setTitle}
-          placeholder='Adventure Title'
-          placeholderTextColor={COLORS.textDim}
-          style={styles.input}
-        />
-        <TextInput
-          value={summary}
-          onChangeText={setSummary}
-          placeholder='Optional Backstory...'
-          placeholderTextColor={COLORS.textDim}
-          style={[styles.input, styles.multilineInput]}
-          multiline
-        />
-        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-        <TouchableOpacity
-          style={[styles.primaryButton, createSession.isPending && styles.buttonDisabled]}
-          onPress={handleCreateSession}
-          disabled={createSession.isPending}
-        >
-          {createSession.isPending ? (
-            <ActivityIndicator color={COLORS.background} />
-          ) : (
-            <Text style={styles.buttonText}>ENTER WORLD</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+        {/* Hero Section */}
+        <FadeIn duration={800}>
+          <View style={styles.heroSection}>
+            <Text style={styles.gameTitle}>RPG AI SUPREME</Text>
+            <Text style={styles.gameSubtitle}>Mundos Infinitos. Historias Infinitas.</Text>
+          </View>
+        </FadeIn>
 
-      <View style={styles.infoPanel}>
-        <Text style={styles.infoText}>Powered by Gemini 2.5 Flash & Pollinations AI</Text>
-      </View>
+        {/* Usage Limits */}
+        {onOpenSubscription && (
+          <SlideIn direction='up' delay={200}>
+            <UsageLimits limits={usageLimits} plan={userPlan} onUpgrade={onOpenSubscription} />
+          </SlideIn>
+        )}
+
+        {/* My Characters Section */}
+        {characters.length > 0 && (
+          <View style={styles.charactersSection}>
+            <Text style={styles.sectionTitle}>👤 Mis Personajes</Text>
+            {isLoadingCharacters ? (
+              <ActivityIndicator color={COLORS.primary} />
+            ) : (
+              characters.map((character) => (
+                <View key={character.id} style={styles.characterCard}>
+                  <View style={styles.characterInfo}>
+                    <Text style={styles.characterName}>{character.nombre}</Text>
+                    <Text style={styles.characterClass}>
+                      {character.raza} {character.clase}
+                    </Text>
+                    <Text style={styles.characterStatus}>Estado: {character.estado}</Text>
+                  </View>
+                  <View style={styles.characterStats}>
+                    <Text style={styles.statLabel}>Nivel 1</Text>
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+        )}
+
+        {/* New Adventure Panel */}
+        <SlideIn direction='up' delay={400}>
+          <View style={styles.sessionPanel}>
+            <Text style={styles.panelTitle}>🗡️ Nueva Aventura</Text>
+            <TextInput
+              value={title}
+              onChangeText={setTitle}
+              placeholder='Nombre de tu aventura'
+              placeholderTextColor={COLORS.textDim}
+              style={styles.input}
+            />
+            <TextInput
+              value={summary}
+              onChangeText={setSummary}
+              placeholder='Describe tu historia (opcional)...'
+              placeholderTextColor={COLORS.textDim}
+              style={[styles.input, styles.multilineInput]}
+              multiline
+            />
+            {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+            <TouchableOpacity
+              style={[styles.primaryButton, createSession.isPending && styles.buttonDisabled]}
+              onPress={handleCreateSession}
+              disabled={createSession.isPending}
+            >
+              {createSession.isPending ? (
+                <ActivityIndicator color={COLORS.background} />
+              ) : (
+                <Text style={styles.buttonText}>⚔️ COMENZAR AVENTURA</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </SlideIn>
+
+        {/* Info Footer */}
+        <View style={styles.infoPanel}>
+          <Text style={styles.infoText}>Powered by Gemini 2.5 Flash & Pollinations AI</Text>
+          <Text style={styles.versionText}>v0.1.1-alpha</Text>
+        </View>
+      </ScrollView>
     </LinearGradient>
   );
 }
@@ -113,13 +230,80 @@ export function HomeScreen({ onSessionCreated }: HomeScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingTop: 20,
     paddingHorizontal: 24,
-    gap: 24,
+    paddingBottom: 32,
+    gap: 16,
+  },
+  userHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontFamily: FONTS.title,
+    fontSize: 18,
+    color: COLORS.background,
+  },
+  welcomeText: {
+    fontFamily: FONTS.body,
+    fontSize: 12,
+    color: COLORS.textDim,
+  },
+  usernameText: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 16,
+    color: COLORS.text,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  premiumButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: theme.colors.gold,
+  },
+  premiumButtonText: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 14,
+    color: COLORS.background,
+  },
+  logoutButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  logoutText: {
+    fontFamily: FONTS.body,
+    fontSize: 14,
+    color: COLORS.textDim,
   },
   heroSection: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   gameTitle: {
     fontFamily: FONTS.title,
@@ -148,16 +332,23 @@ const styles = StyleSheet.create({
   },
   infoPanel: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    opacity: 0.7,
+    paddingBottom: 16,
+    gap: 4,
   },
   infoText: {
     color: COLORS.textDim,
     textAlign: 'center',
-    fontSize: 16,
+    fontSize: 12,
     fontFamily: FONTS.body,
-    lineHeight: 24,
+  },
+  versionText: {
+    color: COLORS.textDim,
+    textAlign: 'center',
+    fontSize: 10,
+    fontFamily: FONTS.body,
+    opacity: 0.6,
   },
   panelTitle: {
     color: COLORS.primary,
@@ -212,5 +403,53 @@ const styles = StyleSheet.create({
     color: COLORS.background,
     textTransform: 'uppercase',
     letterSpacing: 1,
+  },
+  // Characters section
+  charactersSection: {
+    gap: 12,
+  },
+  sectionTitle: {
+    fontFamily: FONTS.title,
+    fontSize: 18,
+    color: COLORS.primary,
+    marginBottom: 4,
+  },
+  characterCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  characterInfo: {
+    flex: 1,
+  },
+  characterName: {
+    fontFamily: FONTS.title,
+    fontSize: 16,
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  characterClass: {
+    fontFamily: FONTS.body,
+    fontSize: 14,
+    color: theme.colors.gold,
+  },
+  characterStatus: {
+    fontFamily: FONTS.body,
+    fontSize: 12,
+    color: COLORS.textDim,
+    marginTop: 4,
+  },
+  characterStats: {
+    alignItems: 'flex-end',
+  },
+  statLabel: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 14,
+    color: COLORS.textDim,
   },
 });

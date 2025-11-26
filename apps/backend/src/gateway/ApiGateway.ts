@@ -1,7 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import fastifyRateLimit from '@fastify/rate-limit';
-import { Redis } from 'ioredis';
 import { createHash } from 'node:crypto';
+import { Redis } from 'ioredis';
+import { IRedisClient } from '../cache/interfaces/IRedisClient.js';
 
 export interface IRateLimitConfig {
   windowMs: number;
@@ -14,7 +15,7 @@ export interface IRateLimitConfig {
 }
 
 export interface IApiGatewayConfig {
-  redis: Redis;
+  redis: IRedisClient;
   globalRateLimit: IRateLimitConfig;
   serviceRateLimits: Record<string, IRateLimitConfig>;
   circuitBreaker: {
@@ -33,7 +34,7 @@ export interface IServiceHealth {
 }
 
 export class ApiGateway {
-  private readonly redis: Redis;
+  private readonly redis: IRedisClient;
 
   private readonly config: IApiGatewayConfig;
 
@@ -81,7 +82,7 @@ export class ApiGateway {
         limit: context.max,
         window: this.config.globalRateLimit.windowMs
       }),
-      redis: this.redis,
+      redis: this.redis instanceof Redis ? this.redis : undefined,
       continueExceeding: true,
       // onLimitReached: this.config.globalRateLimit.onLimitReached
     } as any);

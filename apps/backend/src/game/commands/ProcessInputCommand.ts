@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { BaseGameCommand } from './BaseGameCommand.js';
 import { IGameContext, ICommandResult, IGameLogEntry, INotification, CommandType, IValidationResult, ICommandCost, LogLevel, EffectType, IGameEffect, IReward } from '../interfaces.js';
-import { IAIService, AIModel } from '../../ai/interfaces/IAIService.js';
+import { IAIService, AIModel, AspectRatio, ImageStyle } from '../../ai/interfaces/IAIService.js';
 import { GameError } from '../../errors/GameError.js';
 import { ErrorCode } from '../../types/index.js';
 
@@ -59,6 +59,7 @@ export class ProcessInputCommand extends BaseGameCommand {
                 maxTokens: 1000,
                 context: {
                     sessionId: context.sessionId,
+                    userId: context.userId,
                     gameState: {
                         currentLocation: context.location?.name || 'Unknown',
                         characterLevel: context.character.level,
@@ -75,11 +76,12 @@ export class ProcessInputCommand extends BaseGameCommand {
                     const imageResult = await this.aiService.generateImage({
                         prompt: aiResult.imagePrompt || `Fantasy RPG scene: ${aiResult.narration.slice(0, 100)}...`,
                         numberOfImages: 1,
-                        aspectRatio: '16:9',
-                        style: 'fantasy masterpiece, 8k, detailed, epic lighting'
+                        aspectRatio: AspectRatio.PORTRAIT_16_9,
+                        style: ImageStyle.CINEMATIC,
+                        userId: context.userId
                     });
 
-                    if (imageResult.images && imageResult.images.length > 0) {
+                    if (imageResult.images && imageResult.images.length > 0 && imageResult.images[0]) {
                         logEntries.push({
                             id: uuidv4(),
                             timestamp: new Date().toISOString(),
@@ -87,7 +89,7 @@ export class ProcessInputCommand extends BaseGameCommand {
                             category: 'scene_image',
                             message: 'Visualizing scene...',
                             data: {
-                                imageUrl: imageResult.images[0].base64
+                                imageUrl: imageResult.images[0].base64 || ''
                             }
                         });
                     }
@@ -147,8 +149,8 @@ export class ProcessInputCommand extends BaseGameCommand {
     private mapStateChangesToEffects(stateChanges: Record<string, any>, characterId: string): IGameEffect[] {
         const effects: IGameEffect[] = [];
 
-        if (stateChanges.hp) {
-            const amount = Number(stateChanges.hp);
+        if (stateChanges['hp']) {
+            const amount = Number(stateChanges['hp']);
             if (amount !== 0) {
                 effects.push({
                     id: uuidv4(),
@@ -173,11 +175,11 @@ export class ProcessInputCommand extends BaseGameCommand {
     private mapStateChangesToRewards(stateChanges: Record<string, any>): IReward[] {
         const rewards: IReward[] = [];
 
-        if (stateChanges.gold) {
-            rewards.push({ type: 'gold', amount: Number(stateChanges.gold), description: 'Gold found' });
+        if (stateChanges['gold']) {
+            rewards.push({ type: 'gold', amount: Number(stateChanges['gold']), description: 'Gold found' });
         }
-        if (stateChanges.xp) {
-            rewards.push({ type: 'experience', amount: Number(stateChanges.xp), description: 'XP gained' });
+        if (stateChanges['xp']) {
+            rewards.push({ type: 'experience', amount: Number(stateChanges['xp']), description: 'XP gained' });
         }
 
         return rewards;

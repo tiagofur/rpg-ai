@@ -1,8 +1,8 @@
-import { Redis } from 'ioredis';
 import { v4 as uuidv4 } from 'uuid';
 import { GameError } from '../errors/GameError.js';
 import { ErrorCode } from '../types/index.js';
 import { ILogger } from '../logging/interfaces/ILogger.js';
+import { IRedisClient } from '../cache/interfaces/IRedisClient.js';
 
 export interface ISessionLock {
   sessionId: string;
@@ -23,7 +23,7 @@ export interface ISessionLockManager {
 }
 
 export class SessionLockManager implements ISessionLockManager {
-  private readonly redis: Redis;
+  private readonly redis: IRedisClient;
 
   private readonly logger: ILogger;
 
@@ -31,7 +31,7 @@ export class SessionLockManager implements ISessionLockManager {
 
   private readonly lockTimeoutMs: number;
 
-  constructor(redis: Redis, logger: ILogger, options?: {
+  constructor(redis: IRedisClient, logger: ILogger, options?: {
     defaultTimeoutMs?: number;
     lockTimeoutMs?: number;
   }) {

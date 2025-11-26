@@ -19,7 +19,7 @@ import {
 } from '../types/premium.js';
 import { UserRole } from '../types/index.js';
 import { AuthenticationService } from './AuthenticationService.js';
-import { RedisClient } from '../utils/redis.js';
+import type { IRedisClient } from '../cache/interfaces/IRedisClient.js';
 import { GameError as AppError, ErrorCode } from '../errors/GameError.js';
 
 export interface IUsageStats {
@@ -33,7 +33,7 @@ export class PremiumFeaturesService {
 
   private readonly authService: AuthenticationService;
 
-  private readonly redis: RedisClient;
+  private readonly redis: IRedisClient;
 
   private readonly prisma: PrismaClient;
 
@@ -43,7 +43,7 @@ export class PremiumFeaturesService {
     stripeSecretKey: string,
     webhookSecret: string,
     authService: AuthenticationService,
-    redis: RedisClient,
+    redis: IRedisClient,
     prisma: PrismaClient
   ) {
     this.stripe = new Stripe(stripeSecretKey, {
@@ -74,7 +74,7 @@ export class PremiumFeaturesService {
         data: { stripeCustomerId: customer.id }
       });
 
-      await this.redis.set(`stripe:customer:${userId}`, customer.id, 'EX', 60 * 60 * 24 * 7);
+      await this.redis.setex(`stripe:customer:${userId}`, 60 * 60 * 24 * 7, customer.id);
       return customer.id;
     } catch (error) {
       // console.error('Error creating Stripe customer:', error);
@@ -130,7 +130,7 @@ export class PremiumFeaturesService {
       // Save to DB
       await this.saveSubscriptionToDb(subscriptionRecord);
 
-      await this.redis.set(`subscription:active:${userId}`, JSON.stringify(subscriptionRecord), 'EX', 60 * 60 * 24 * 7);
+      await this.redis.setex(`subscription:active:${userId}`, 60 * 60 * 24 * 7, JSON.stringify(subscriptionRecord));
       await this.updateUserRole(userId, plan);
 
       const invoice = subscription.latest_invoice as Stripe.Invoice;
@@ -138,7 +138,7 @@ export class PremiumFeaturesService {
 
       return {
         subscriptionId: subscriptionRecord.id,
-        stripeClientSecret: paymentIntent.client_secret!,
+        stripeClientSecret: paymentIntent.client_secret || '',
         status: paymentIntent.status === 'requires_action' ? 'requires_confirmation' : 'requires_payment_method',
       };
     } catch (error) {
@@ -178,16 +178,19 @@ export class PremiumFeaturesService {
     await this.prisma.subscription.create({
       data: {
         userId: subscriptionRecord.userId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         plan: subscriptionRecord.plan as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         status: subscriptionRecord.status as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         billingInterval: subscriptionRecord.billingInterval as any,
         currentPeriodStart: new Date(subscriptionRecord.currentPeriodStart),
         currentPeriodEnd: new Date(subscriptionRecord.currentPeriodEnd),
         cancelAtPeriodEnd: subscriptionRecord.cancelAtPeriodEnd,
         canceledAt: subscriptionRecord.canceledAt ? new Date(subscriptionRecord.canceledAt) : null,
-        stripeSubscriptionId: subscriptionRecord.stripeSubscriptionId,
-        stripeCustomerId: subscriptionRecord.stripeCustomerId,
-        defaultPaymentMethod: subscriptionRecord.defaultPaymentMethod,
+        stripeSubscriptionId: subscriptionRecord.stripeSubscriptionId ?? '',
+        stripeCustomerId: subscriptionRecord.stripeCustomerId ?? '',
+        defaultPaymentMethod: subscriptionRecord.defaultPaymentMethod ?? null,
       }
     });
   }
@@ -226,7 +229,7 @@ export class PremiumFeaturesService {
           updatedAt: databaseSub.updatedAt.toISOString(),
         };
         // Cache it
-        await this.redis.set(`subscription:active:${userId}`, JSON.stringify(sub), 'EX', 60 * 60 * 24 * 7);
+        await this.redis.setex(`subscription:active:${userId}`, 60 * 60 * 24 * 7, JSON.stringify(sub));
         return sub;
       }
 
@@ -288,6 +291,10 @@ export class PremiumFeaturesService {
     }
 
     try {
+      if (!subscription.stripeSubscriptionId) {
+        throw new AppError('Cannot cancel non-Stripe subscription via this endpoint', ErrorCode.VALIDATION_ERROR, 400);
+      }
+
       await this.stripe.subscriptions.update(subscription.stripeSubscriptionId, {
         cancel_at_period_end: cancelAtPeriodEnd,
       });
@@ -300,7 +307,7 @@ export class PremiumFeaturesService {
 
       // Update Cache
       subscription.cancelAtPeriodEnd = cancelAtPeriodEnd;
-      await this.redis.set(`subscription:active:${userId}`, JSON.stringify(subscription), 'EX', 60 * 60 * 24 * 7);
+      await this.redis.setex(`subscription:active:${userId}`, 60 * 60 * 24 * 7, JSON.stringify(subscription));
     } catch (error) {
       // console.error('Error canceling subscription:', error);
       throw new AppError('Failed to cancel subscription', ErrorCode.INTERNAL_SERVER_ERROR, 500);
@@ -310,15 +317,36 @@ export class PremiumFeaturesService {
   /**
    * Obtener estadísticas de uso
    */
-  public async getUsageStats(_userId: string): Promise<IUsageStats> {
-    // Implementación dummy por ahora
-    // TODO: Implementar lógica real de estadísticas
-    // console.log(`Getting usage stats for user ${userId}`);
-    return {
-      aiRequests: 0,
-      storageUsed: 0,
-      charactersCreated: 0
-    };
+  public async getUsageStats(userId: string): Promise<IUsageStats> {
+    try {
+      // 1. Get AI Usage from Redis
+      const aiUsageKey = `usage:ai:${userId}:requests`;
+      const requests = await this.redis.get(aiUsageKey);
+
+      const aiRequests = parseInt(requests || '0', 10);
+
+      // 2. Get Character Count from DB
+      const charactersCreated = await this.prisma.character.count({
+        where: { playerId: userId }
+      });
+
+      // 3. Estimate Storage (Mock for now, or based on images/saves)
+      // Assuming 1MB per character + 5MB per 100 AI requests (logs)
+      const storageUsed = (charactersCreated * 1) + (aiRequests * 0.05);
+
+      return {
+        aiRequests,
+        storageUsed: Math.round(storageUsed * 100) / 100, // Round to 2 decimals
+        charactersCreated
+      };
+    } catch (error) {
+      // console.error('Error getting usage stats:', error);
+      return {
+        aiRequests: 0,
+        storageUsed: 0,
+        charactersCreated: 0
+      };
+    }
   }
 
   private mapStripeStatusToSubscriptionStatus(stripeStatus: string): SubscriptionStatus {
@@ -356,6 +384,7 @@ export class PremiumFeaturesService {
       await this.prisma.subscription.update({
         where: { stripeSubscriptionId: subscription.id },
         data: {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           status: status as any,
           currentPeriodStart,
           currentPeriodEnd,
@@ -372,7 +401,7 @@ export class PremiumFeaturesService {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (currentSubscription as any).updatedAt = new Date().toISOString();
 
-        await this.redis.set(`subscription:active:${userId}`, JSON.stringify(currentSubscription), 'EX', 60 * 60 * 24 * 7);
+        await this.redis.setex(`subscription:active:${userId}`, 60 * 60 * 24 * 7, JSON.stringify(currentSubscription));
       }
     }
   }

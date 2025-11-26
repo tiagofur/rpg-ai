@@ -1,0 +1,83 @@
+version: "3.8"
+
+services:
+  # MongoDB for testing
+  mongodb-test:
+    image: mongo:7.0
+    container_name: rpg-ai-mongodb-test
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: rpg_ai_test
+    volumes:
+      - mongodb-test-data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rpg-ai-test
+
+  # Redis for testing
+  redis-test:
+    image: redis:7-alpine
+    container_name: rpg-ai-redis-test
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - rpg-ai-test
+
+  # Backend test runner
+  backend-test:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile.test
+    container_name: rpg-ai-backend-test
+    depends_on:
+      mongodb-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    environment:
+      # Database
+      DATABASE_URL: "mongodb://mongodb-test:27017/rpg_ai_test"
+
+      # Redis
+      REDIS_URL: "redis://redis-test:6379"
+
+      # JWT Secrets
+      JWT_SECRET: "test-jwt-secret-do-not-use-in-production"
+      JWT_REFRESH_SECRET: "test-refresh-secret-do-not-use-in-production"
+
+      # OpenAI (mock or disabled for tests)
+      OPENAI_API_KEY: "sk-test-mock-key"
+
+      # Server
+      PORT: "3333"
+      NODE_ENV: "test"
+
+      # Disable external services
+      STRIPE_SECRET_KEY: "sk_test_mock"
+      STRIPE_WEBHOOK_SECRET: "whsec_test_mock"
+    volumes:
+      - ./apps/backend:/app/apps/backend
+      - ./packages:/app/packages
+      - /app/node_modules
+      - /app/apps/backend/node_modules
+    command: pnpm test
+    networks:
+      - rpg-ai-test
+
+volumes:
+  mongodb-test-data:
+
+networks:
+  rpg-ai-test:
+    driver: bridge

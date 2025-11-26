@@ -27,7 +27,7 @@
     "moduleResolution": "NodeNext",
     "target": "ES2022"
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/test/**/*.ts"],
   "exclude": ["dist", "node_modules"],
   "references": [
     {

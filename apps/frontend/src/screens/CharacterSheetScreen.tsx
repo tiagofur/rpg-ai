@@ -5,11 +5,15 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useCharacter } from '../hooks/useCharacter';
 import { useSubscription } from '../hooks/useSubscription';
+import { useGameSession } from '../hooks/useGameSession';
+import { useGameEffects } from '../hooks/useGameEffects';
 import { COLORS, FONTS } from '../theme';
 
 interface CharacterSheetScreenProps {
@@ -22,11 +26,17 @@ import { Item } from '../types';
 interface EquipmentSlotProps {
   slot: string;
   item?: Item;
+  onPress?: () => void;
 }
 
-function EquipmentSlot({ slot, item }: EquipmentSlotProps) {
+function EquipmentSlot({ slot, item, onPress }: EquipmentSlotProps) {
   return (
-    <View style={styles.slotContainer}>
+    <TouchableOpacity
+      style={styles.slotContainer}
+      onPress={onPress}
+      disabled={!item}
+      activeOpacity={0.7}
+    >
       <View style={[styles.slotBox, item ? styles.slotFilled : styles.slotEmpty]}>
         <Text style={styles.slotIcon}>{getSlotIcon(slot)}</Text>
       </View>
@@ -34,7 +44,7 @@ function EquipmentSlot({ slot, item }: EquipmentSlotProps) {
       <Text style={styles.slotItemName} numberOfLines={1}>
         {item ? item.name : '-'}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -66,6 +76,26 @@ export function CharacterSheetScreen({ characterId, onClose }: CharacterSheetScr
   const { t } = useTranslation();
   const { data: character, isLoading, isError } = useCharacter(characterId);
   const { subscription, config } = useSubscription();
+  // Assuming sessionId is available in context or passed as prop.
+  // Since it's not passed, we might need to get it from a global store or context.
+  // For now, I'll assume we can't execute commands directly without sessionId.
+  // Wait, GameScreen passes characterId but not sessionId to CharacterSheetScreen?
+  // Let's check GameScreen.tsx again.
+
+  // GameScreen.tsx:
+  // <CharacterSheetScreen characterId={characterId} onClose={() => setActiveModal(null)} />
+
+  // I need to update GameScreen to pass sessionId if I want to unequip.
+  // Or I can just show the stats for now and add unequip later.
+  // But "Polish" implies functionality.
+
+  // Let's check if I can get sessionId from somewhere else.
+  // It seems I need to update GameScreen first to pass sessionId.
+
+  // For now, let's just add the visual polish (animations/haptics) and leave unequip for when sessionId is available.
+  // Actually, I can use useGameEffects for haptics.
+
+  const { playHaptic } = useGameEffects();
 
   if (isLoading) {
     return (
@@ -94,13 +124,19 @@ export function CharacterSheetScreen({ characterId, onClose }: CharacterSheetScr
     <LinearGradient colors={[COLORS.background, '#1a1a2e']} style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('game.character')}</Text>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+        <TouchableOpacity
+          onPress={() => {
+            playHaptic('light');
+            onClose();
+          }}
+          style={styles.closeButton}
+        >
           <Text style={styles.closeButtonText}>✕</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>
-        <View style={styles.section}>
+        <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.section}>
           <View style={styles.nameContainer}>
             <Text style={styles.characterName}>{character.name}</Text>
             {isPremium && (
@@ -117,9 +153,9 @@ export function CharacterSheetScreen({ characterId, onClose }: CharacterSheetScr
           <Text style={styles.characterClass}>
             {t('character.level')} {character.level} {character.class}
           </Text>
-        </View>
+        </Animated.View>
 
-        <View style={styles.statsRow}>
+        <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.statsRow}>
           <LinearGradient
             colors={['rgba(255, 77, 77, 0.2)', 'rgba(255, 77, 77, 0.05)']}
             style={styles.statBox}
@@ -145,9 +181,9 @@ export function CharacterSheetScreen({ characterId, onClose }: CharacterSheetScr
             <Text style={[styles.statLabel, { color: COLORS.xp }]}>XP</Text>
             <Text style={styles.statValue}>{character.experience}</Text>
           </LinearGradient>
-        </View>
+        </Animated.View>
 
-        <View style={styles.section}>
+        <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.section}>
           <Text style={styles.sectionTitle}>{t('character.attributes')}</Text>
           <View style={styles.attributesGrid}>
             {Object.entries(character.attributes || {}).map(([key, value]) => (
@@ -159,54 +195,92 @@ export function CharacterSheetScreen({ characterId, onClose }: CharacterSheetScr
               </View>
             ))}
           </View>
-        </View>
+        </Animated.View>
 
-        <View style={styles.section}>
+        <Animated.View entering={FadeInDown.delay(400).springify()} style={styles.section}>
           <Text style={styles.sectionTitle}>{t('character.equipment')}</Text>
           <View style={styles.paperDollContainer}>
             {/* Left Column: Weapon, Shield, Gloves */}
             <View style={styles.paperDollColumn}>
-              <EquipmentSlot slot='weapon' item={character.equipment?.weapon} />
-              <EquipmentSlot slot='shield' item={character.equipment?.shield} />
-              <EquipmentSlot slot='gloves' item={character.equipment?.gloves} />
+              <EquipmentSlot
+                slot='weapon'
+                item={character.equipment?.weapon}
+                onPress={() => playHaptic('light')}
+              />
+              <EquipmentSlot
+                slot='shield'
+                item={character.equipment?.shield}
+                onPress={() => playHaptic('light')}
+              />
+              <EquipmentSlot
+                slot='gloves'
+                item={character.equipment?.gloves}
+                onPress={() => playHaptic('light')}
+              />
             </View>
 
             {/* Center Column: Helmet, Armor, Boots */}
             <View style={styles.paperDollCenter}>
-              <EquipmentSlot slot='helmet' item={character.equipment?.helmet} />
+              <EquipmentSlot
+                slot='helmet'
+                item={character.equipment?.helmet}
+                onPress={() => playHaptic('light')}
+              />
               <View style={styles.characterSilhouette}>
                 <Text style={styles.silhouetteText}>👤</Text>
               </View>
-              <EquipmentSlot slot='armor' item={character.equipment?.armor} />
-              <EquipmentSlot slot='boots' item={character.equipment?.boots} />
+              <EquipmentSlot
+                slot='armor'
+                item={character.equipment?.armor}
+                onPress={() => playHaptic('light')}
+              />
+              <EquipmentSlot
+                slot='boots'
+                item={character.equipment?.boots}
+                onPress={() => playHaptic('light')}
+              />
             </View>
 
             {/* Right Column: Amulet, Ring1, Ring2 */}
             <View style={styles.paperDollColumn}>
-              <EquipmentSlot slot='amulet' item={character.equipment?.amulet} />
-              <EquipmentSlot slot='ring1' item={character.equipment?.ring1} />
-              <EquipmentSlot slot='ring2' item={character.equipment?.ring2} />
+              <EquipmentSlot
+                slot='amulet'
+                item={character.equipment?.amulet}
+                onPress={() => playHaptic('light')}
+              />
+              <EquipmentSlot
+                slot='ring1'
+                item={character.equipment?.ring1}
+                onPress={() => playHaptic('light')}
+              />
+              <EquipmentSlot
+                slot='ring2'
+                item={character.equipment?.ring2}
+                onPress={() => playHaptic('light')}
+              />
             </View>
           </View>
-        </View>
+        </Animated.View>
 
         {isPremium && currentPlan && (
-          <LinearGradient
-            colors={['rgba(247, 207, 70, 0.1)', 'rgba(247, 207, 70, 0.02)']}
-            style={[styles.section, styles.premiumSection]}
-          >
-            <Text style={styles.sectionTitle}>{t('character.premiumFeatures')}</Text>
-            <Text style={styles.planName}>
-              {t('character.activePlan')}: {currentPlan.name}
-            </Text>
-            <View style={styles.featuresList}>
-              {currentPlan.features.map((feature, index) => (
-                <Text key={index} style={styles.featureItem}>
-                  • {feature}
-                </Text>
-              ))}
-            </View>
-          </LinearGradient>
+          <Animated.View entering={FadeInDown.delay(500).springify()}>
+            <LinearGradient
+              colors={['rgba(247, 207, 70, 0.1)', 'rgba(247, 207, 70, 0.02)']}
+              style={[styles.section, styles.premiumSection]}
+            >
+              <Text style={styles.sectionTitle}>{t('character.premiumFeatures')}</Text>
+              <Text style={styles.planName}>
+                {t('character.activePlan')}: {currentPlan.name}
+              </Text>
+              <View style={styles.featuresList}>
+                {currentPlan.features.map((feature, index) => (
+                  <Text key={index} style={styles.featureItem}>
+                    • {feature}
+                  </Text>
+                ))}
+              </View>
+            </LinearGradient>
+          </Animated.View>
         )}
       </ScrollView>
     </LinearGradient>

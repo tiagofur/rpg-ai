@@ -14,7 +14,20 @@
     "inputPlaceholder": "¿Qué quieres hacer?",
     "character": "Personaje",
     "inventory": "Inventario",
-    "premium": "Premium"
+    "premium": "Premium",
+    "level": "Nv.",
+    "aiThinking": "La IA está pensando",
+    "aiCrafting": "El Dungeon Master está forjando tu destino",
+    "aiPleaseWait": "Por favor espera...",
+    "quickLook": "Mirar",
+    "quickAttack": "Atacar",
+    "quickBag": "Bolsa",
+    "quickHero": "Héroe",
+    "quickTalk": "Hablar",
+    "quickRest": "Descansar",
+    "quickSearch": "Buscar",
+    "quickMove": "Mover",
+    "quickDefend": "Defender"
   },
   "character": {
     "title": "Hoja de Personaje",

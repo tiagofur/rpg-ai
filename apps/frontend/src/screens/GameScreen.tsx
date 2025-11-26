@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
@@ -11,50 +10,116 @@ import {
   Platform,
   Modal,
   Image,
-  ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useGameSession } from '../hooks/useGameSession';
 import { useCharacter } from '../hooks/useCharacter';
+import { useGameEffects } from '../hooks/useGameEffects';
+import { UsageLimits, type UsageLimitData } from '../components/UsageLimits';
+import { Skeleton } from '../components/Skeleton';
 import { CharacterSheetScreen } from './CharacterSheetScreen';
 import { InventoryScreen } from './InventoryScreen';
 import { SubscriptionScreen } from './SubscriptionScreen';
+import { ProfileScreen } from './ProfileScreen';
 import { COLORS, FONTS } from '../theme';
+import { socketService } from '../api/socket';
+
+import { DailyRewardModal } from '../components/DailyRewardModal';
+import { AIThinkingIndicator } from '../components/AIThinkingIndicator';
+import { QuickActionsBar } from '../components/QuickActionsBar';
+import { NarrativeEntry, getEntryType } from '../components/NarrativeEntry';
+
+interface GameEvent {
+  category?: string;
+  type?: string;
+  data?: {
+    imageUrl?: string;
+    critical?: boolean;
+    type?: string;
+    damage?: number;
+    result?: {
+      message?: string;
+      logEntries?: GameEvent[];
+    };
+    commandType?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    [key: string]: any;
+  };
+  message?: string;
+  timestamp?: string;
+  id?: string;
+}
 
 interface GameScreenProps {
   sessionId: string;
   characterId: string;
+  token: string;
   onExit: () => void;
 }
 
-interface CommandData {
-  commandType?: string;
-  result?: {
-    message?: string;
-  };
-}
-
-export function GameScreen({ sessionId, characterId, onExit }: GameScreenProps) {
+export function GameScreen({ sessionId, characterId, token, onExit }: GameScreenProps) {
   const { t } = useTranslation();
+  // const queryClient = useQueryClient();
   const { startSession, sessionState, executeCommand, undoCommand } = useGameSession(sessionId);
   const { data: character, refetch: refetchCharacter } = useCharacter(characterId);
+  const { playCombatEffect, playHaptic } = useGameEffects();
   const [input, setInput] = useState('');
   const [isDead, setIsDead] = useState(false);
-  const [activeModal, setActiveModal] = useState<'character' | 'inventory' | 'subscription' | null>(
-    null
-  );
+  const [activeModal, setActiveModal] = useState<
+    'character' | 'inventory' | 'subscription' | 'profile' | null
+  >(null);
   const flatListRef = useRef<FlatList>(null);
+
+  // Usage limits (mock - en producción viene del backend)
+  const [usageLimits] = useState<UsageLimitData[]>([
+    { feature: 'AI', current: 87, limit: 100, icon: '🧠' },
+    { feature: 'Images', current: 8, limit: 10, icon: '🖼️' },
+  ]);
+  const [userPlan] = useState<'free' | 'basic' | 'premium' | 'supreme'>('free');
 
   // Initialize session on mount
   useEffect(() => {
     startSession.mutate({ characterId });
+
+    // Connect Socket
+    socketService.connect(token);
+    socketService.joinGame(sessionId);
+
+    // Listen for events
+    socketService.on('game:event', (data) => {
+      // console.log('Game Event Received:', data);
+
+      // Handle Effects
+      if (data.type === 'combat') {
+        const payload = data.payload as { critical?: boolean; type?: string };
+        const isCrit = payload?.critical || false;
+        const isMiss = payload?.type === 'miss';
+        playCombatEffect(isCrit, isMiss);
+      } else if (data.type === 'loot') {
+        playHaptic('success');
+      }
+
+      // In a real app, we would update the React Query cache here
+      // queryClient.setQueryData(['session', sessionId], (old: any) => { ... });
+      // For now, we rely on polling or just let the user know something happened
+      void sessionState.refetch();
+    });
+
+    socketService.on('player:resolution', () => {
+      void sessionState.refetch();
+      void refetchCharacter();
+    });
+
+    return () => {
+      socketService.disconnect();
+    };
   }, []);
 
   // Refetch character when session updates (to update HP/Mana/XP)
   useEffect(() => {
     if (sessionState.data) {
-      refetchCharacter();
+      void refetchCharacter();
     }
   }, [sessionState.data]);
 
@@ -72,6 +137,8 @@ export function GameScreen({ sessionId, characterId, onExit }: GameScreenProps) 
   const handleSendCommand = (cmd?: string) => {
     const commandToSend = cmd || input.trim();
     if (!commandToSend) return;
+
+    playHaptic('light'); // Feedback on send
 
     executeCommand.mutate({
       type: 'custom',
@@ -94,8 +161,12 @@ export function GameScreen({ sessionId, characterId, onExit }: GameScreenProps) 
   if (sessionState.isLoading || startSession.isPending) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size='large' color='#f7cf46' />
-        <Text style={styles.loadingText}>{t('game.loadingWorld')}</Text>
+        <View style={{ alignItems: 'center', gap: 16 }}>
+          <Skeleton variant='circle' width={80} />
+          <Skeleton variant='text' width={200} height={20} />
+          <Skeleton variant='text' width={150} height={16} />
+          <Skeleton variant='rect' width={300} height={120} style={{ marginTop: 20 }} />
+        </View>
       </View>
     );
   }
@@ -114,15 +185,38 @@ export function GameScreen({ sessionId, characterId, onExit }: GameScreenProps) 
   const history = sessionState.data?.history || [];
 
   // Find latest image from history
-  const latestImageEntry = [...history]
-    .reverse()
-    .find((entry) => entry.category === 'scene_image' && entry.data?.imageUrl);
-  const currentSceneImage = latestImageEntry?.data?.imageUrl as string | undefined;
+  const latestImageEntry = [...history].reverse().find((entry: GameEvent) => {
+    // Check direct scene_image event
+    if (entry.category === 'scene_image' && entry.data?.imageUrl) return true;
+    // Check inside command_executed result
+    if (entry.type === 'command_executed' && entry.data?.result?.logEntries) {
+      return entry.data.result.logEntries.some(
+        (log: GameEvent) => log.category === 'scene_image' && log.data?.imageUrl
+      );
+    }
+    return false;
+  });
+
+  let currentSceneImage: string | undefined;
+  if (latestImageEntry) {
+    const entry = latestImageEntry as GameEvent;
+    if (entry.category === 'scene_image') {
+      currentSceneImage = entry.data?.imageUrl;
+    } else if (entry.type === 'command_executed') {
+      const imgLog = entry.data?.result?.logEntries?.find(
+        (log: GameEvent) => log.category === 'scene_image'
+      );
+      currentSceneImage = imgLog?.data?.imageUrl;
+    }
+  }
 
   const renderStatusBar = () => {
     if (!character) return null;
+
     const hpPercent = (character.health.current / character.health.maximum) * 100;
-    const mpPercent = (character.mana.current / character.mana.maximum) * 100;
+    const manaPercent = (character.mana.current / character.mana.maximum) * 100;
+    const nextLevelXp = character.nextLevelExperience || 1000;
+    const xpPercent = (character.experience / nextLevelXp) * 100;
 
     return (
       <View style={styles.statusBar}>
@@ -130,25 +224,42 @@ export function GameScreen({ sessionId, characterId, onExit }: GameScreenProps) 
           <View style={styles.statusInfo}>
             <Text style={styles.charName}>{character.name}</Text>
             <Text style={styles.charLevel}>
-              Lvl {character.level} {character.class}
+              {t('game.level')} {character.level} {character.class}
             </Text>
           </View>
           <View style={styles.barsContainer}>
+            {/* HP Bar */}
             <View style={styles.barWrapper}>
-              <View
-                style={[styles.barFill, { width: `${hpPercent}%`, backgroundColor: COLORS.hp }]}
+              <LinearGradient
+                colors={['#ff4444', '#cc0000']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.barFill, { width: `${hpPercent}%` }]}
               />
               <Text style={styles.barText}>
                 {character.health.current}/{character.health.maximum} HP
               </Text>
             </View>
+            {/* Mana Bar */}
             <View style={styles.barWrapper}>
-              <View
-                style={[styles.barFill, { width: `${mpPercent}%`, backgroundColor: COLORS.mp }]}
+              <LinearGradient
+                colors={['#4444ff', '#0000cc']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.barFill, { width: `${manaPercent}%` }]}
               />
               <Text style={styles.barText}>
                 {character.mana.current}/{character.mana.maximum} MP
               </Text>
+            </View>
+            {/* XP Bar */}
+            <View style={[styles.barWrapper, { height: 4, marginTop: 4 }]}>
+              <LinearGradient
+                colors={['#ffd700', '#b8860b']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.barFill, { width: `${xpPercent}%` }]}
+              />
             </View>
           </View>
         </View>
@@ -156,53 +267,30 @@ export function GameScreen({ sessionId, characterId, onExit }: GameScreenProps) 
     );
   };
 
-  const renderLogEntry = ({ item }: { item: any }) => {
-    const isCombat = item.category === 'combat';
+  const renderLogEntry = ({ item, index }: { item: GameEvent; index: number }) => {
+    const entryType = getEntryType(item);
     const data = item.data || {};
 
-    // Combat Log Styling
-    if (isCombat) {
-      const isCrit = data.critical;
-      const isMiss = data.type === 'miss';
-      const isDeath = data.type === 'death';
-
-      return (
-        <View
-          style={[
-            styles.logEntry,
-            styles.combatLogEntry,
-            isCrit && styles.critLogEntry,
-            isDeath && styles.deathLogEntry,
-          ]}
-        >
-          <Text style={styles.logTimestamp}>{new Date(item.timestamp).toLocaleTimeString()}</Text>
-          <Text
-            style={[
-              styles.logText,
-              isCrit && styles.critText,
-              isMiss && styles.missText,
-              isDeath && styles.deathText,
-            ]}
-          >
-            {item.message}
-          </Text>
-          {data.damage && <Text style={styles.damageText}>-{data.damage} HP</Text>}
-        </View>
-      );
+    // Get message from different sources
+    let message = item.message || '';
+    if (item.type === 'command_executed' && item.data?.result?.message) {
+      message = item.data.result.message;
+    }
+    if (!message && item.data) {
+      message = JSON.stringify(item.data);
     }
 
-    // Standard Log
     return (
-      <View style={styles.logEntry}>
-        <Text style={styles.logTimestamp}>{new Date(item.timestamp).toLocaleTimeString()}</Text>
-        <Text style={styles.logText}>
-          {item.type === 'command_executed'
-            ? `> ${(item.data as unknown as CommandData).commandType}`
-            : (item.data as unknown as CommandData).result?.message ||
-              item.message ||
-              JSON.stringify(item.data)}
-        </Text>
-      </View>
+      <NarrativeEntry
+        type={entryType}
+        message={message}
+        timestamp={item.timestamp}
+        damage={data.damage}
+        isCritical={data.critical}
+        isMiss={data.type === 'miss'}
+        commandType={data.commandType}
+        index={index}
+      />
     );
   };
 
@@ -217,14 +305,27 @@ export function GameScreen({ sessionId, characterId, onExit }: GameScreenProps) 
           <TouchableOpacity onPress={onExit} style={styles.backButton}>
             <Text style={styles.backButtonText}>← {t('common.exit')}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>RPG AI SUPREME</Text>
-          <TouchableOpacity
-            onPress={handleUndo}
-            disabled={undoCommand.isPending}
-            style={styles.undoButton}
-          >
-            <Text style={styles.undoButtonText}>{t('common.undo')}</Text>
-          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={styles.title}>RPG AI SUPREME</Text>
+            <UsageLimits
+              limits={usageLimits}
+              plan={userPlan}
+              onUpgrade={() => setActiveModal('subscription')}
+              compact
+            />
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={handleUndo}
+              disabled={undoCommand.isPending}
+              style={styles.headerButton}
+            >
+              <Text style={styles.headerButtonText}>{t('common.undo')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setActiveModal('profile')} style={styles.headerButton}>
+              <Text style={styles.headerButtonIcon}>⚙️</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         {/* Status Bar */}
         {renderStatusBar()}
@@ -256,22 +357,15 @@ export function GameScreen({ sessionId, characterId, onExit }: GameScreenProps) 
             contentContainerStyle={styles.logList}
           />
         </View>
-        // ...existing code...
         {/* Quick Actions Toolbar */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => handleSendCommand('look')}>
-            <Text style={styles.actionButtonText}>👁️ Look</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => handleSendCommand('attack')}>
-            <Text style={styles.actionButtonText}>⚔️ Attack</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => setActiveModal('inventory')}>
-            <Text style={styles.actionButtonText}>🎒 Bag</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => setActiveModal('character')}>
-            <Text style={styles.actionButtonText}>👤 Hero</Text>
-          </TouchableOpacity>
-        </View>
+        <QuickActionsBar
+          onAction={handleSendCommand}
+          onOpenInventory={() => setActiveModal('inventory')}
+          onOpenCharacter={() => setActiveModal('character')}
+          disabled={executeCommand.isPending}
+        />
+        {/* AI Thinking Indicator */}
+        <AIThinkingIndicator visible={executeCommand.isPending} variant='inline' />
         {/* Input Area */}
         <View style={styles.inputArea}>
           <TextInput
@@ -333,7 +427,11 @@ export function GameScreen({ sessionId, characterId, onExit }: GameScreenProps) 
           animationType='slide'
           onRequestClose={() => setActiveModal(null)}
         >
-          <InventoryScreen characterId={characterId} onClose={() => setActiveModal(null)} />
+          <InventoryScreen
+            sessionId={sessionId}
+            characterId={characterId}
+            onClose={() => setActiveModal(null)}
+          />
         </Modal>
         <Modal
           visible={activeModal === 'subscription'}
@@ -342,6 +440,21 @@ export function GameScreen({ sessionId, characterId, onExit }: GameScreenProps) 
         >
           <SubscriptionScreen onClose={() => setActiveModal(null)} />
         </Modal>
+        <Modal
+          visible={activeModal === 'profile'}
+          animationType='slide'
+          onRequestClose={() => setActiveModal(null)}
+        >
+          <ProfileScreen
+            onClose={() => setActiveModal(null)}
+            onLogout={onExit}
+            username={character?.name || 'Adventurer'}
+            onOpenSubscription={() => {
+              setActiveModal('subscription');
+            }}
+          />
+        </Modal>
+        <DailyRewardModal token={token} />
       </KeyboardAvoidingView>
     </LinearGradient>
   );
@@ -369,6 +482,11 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: 'rgba(0,0,0,0.5)',
     zIndex: 10,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
   },
   statusBar: {
     padding: 12,
@@ -459,6 +577,21 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontFamily: FONTS.body,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerButton: {
+    padding: 8,
+  },
+  headerButtonText: {
+    color: '#ff8080',
+    fontFamily: FONTS.body,
+  },
+  headerButtonIcon: {
+    fontSize: 18,
+  },
   undoButton: {
     padding: 8,
   },
@@ -489,82 +622,6 @@ const styles = StyleSheet.create({
   logList: {
     gap: 12,
     paddingBottom: 16,
-  },
-  logEntry: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    padding: 12,
-    borderRadius: 8,
-    borderLeftWidth: 2,
-    borderLeftColor: COLORS.primary,
-  },
-  combatLogEntry: {
-    backgroundColor: 'rgba(50, 0, 0, 0.3)',
-    borderLeftColor: '#ff4444',
-  },
-  critLogEntry: {
-    backgroundColor: 'rgba(100, 0, 0, 0.5)',
-    borderLeftColor: '#ff0000',
-    borderWidth: 1,
-    borderColor: '#ffaa00',
-  },
-  deathLogEntry: {
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    borderLeftColor: '#666',
-    borderWidth: 1,
-    borderColor: '#999',
-  },
-  logTimestamp: {
-    color: COLORS.textDim,
-    fontSize: 10,
-    marginBottom: 4,
-    fontFamily: FONTS.body,
-  },
-  logText: {
-    color: COLORS.text,
-    fontSize: 14,
-    lineHeight: 22,
-    fontFamily: FONTS.body,
-  },
-  critText: {
-    color: '#ffaa00',
-    fontWeight: 'bold',
-    fontSize: 15,
-  },
-  missText: {
-    color: '#aaa',
-    fontStyle: 'italic',
-  },
-  deathText: {
-    color: '#ff4444',
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-  },
-  damageText: {
-    color: '#ff4444',
-    fontWeight: 'bold',
-    fontSize: 12,
-    marginTop: 4,
-    alignSelf: 'flex-end',
-  },
-  quickActions: {
-    flexDirection: 'row',
-    padding: 8,
-    gap: 8,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  actionButton: {
-    flex: 1,
-    backgroundColor: 'rgba(247, 207, 70, 0.1)',
-    paddingVertical: 12,
-    borderRadius: 6,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(247, 207, 70, 0.3)',
-  },
-  actionButtonText: {
-    color: COLORS.primary,
-    fontFamily: FONTS.bodyBold,
-    fontSize: 12,
   },
   inputArea: {
     flexDirection: 'row',

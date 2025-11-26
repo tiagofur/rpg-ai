@@ -89,6 +89,7 @@ export interface IImageGenerationParameters {
   negativePrompt?: string;
   seed?: number;
   style?: ImageStyle;
+  userId?: string;
 }
 
 /**

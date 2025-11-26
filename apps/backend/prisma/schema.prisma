@@ -64,6 +64,11 @@ model User {
   // Stripe fields
   stripeCustomerId String?
 
+  // Notifications & Retention
+  pushToken                String?
+  lastDailyRewardClaimedAt DateTime?
+  dailyRewardStreak        Int       @default(0)
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -246,9 +251,16 @@ model Subscription {
   currentPeriodEnd     DateTime
   cancelAtPeriodEnd    Boolean
   canceledAt           DateTime?
-  stripeSubscriptionId String             @unique
-  stripeCustomerId     String
+  
+  // Stripe (Optional for IAP support)
+  stripeSubscriptionId String?            @unique
+  stripeCustomerId     String?
   defaultPaymentMethod String?
+
+  // IAP (New)
+  iapProvider          String?            // 'apple' | 'google'
+  iapTransactionId     String?            @unique
+  iapOriginalTransactionId String?
   
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt

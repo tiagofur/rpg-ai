@@ -1,0 +1,33 @@
+# Dockerfile for running backend tests
+FROM node:20-alpine
+
+# Install pnpm
+RUN npm install -g pnpm
+
+WORKDIR /app
+
+# Copy workspace configuration
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+
+# Copy packages
+COPY packages ./packages
+
+# Copy backend app
+COPY apps/backend ./apps/backend
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Generate Prisma Client
+WORKDIR /app/apps/backend
+RUN pnpm prisma generate
+
+# Build shared package
+WORKDIR /app/packages/shared
+RUN pnpm build
+
+# Return to backend
+WORKDIR /app/apps/backend
+
+# Default command (can be overridden)
+CMD ["pnpm", "test"]

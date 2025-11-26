@@ -31,6 +31,11 @@ export interface IRedisClient {
   lset(key: string, index: number, value: string): Promise<string>;
   ltrim(key: string, start: number, stop: number): Promise<string>;
   zadd(key: string, score: number, member: string): Promise<number>;
+  ping(): Promise<string>;
+  pexpire(key: string, milliseconds: number): Promise<number>;
+  pttl(key: string): Promise<number>;
+  incrby(key: string, increment: number): Promise<number>;
+  info(section?: string): Promise<string>;
 }
 
 export interface ICacheClient {

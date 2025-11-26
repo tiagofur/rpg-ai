@@ -14,7 +14,20 @@
     "inputPlaceholder": "What do you want to do?",
     "character": "Character",
     "inventory": "Inventory",
-    "premium": "Premium"
+    "premium": "Premium",
+    "level": "Lv.",
+    "aiThinking": "AI is thinking",
+    "aiCrafting": "The Dungeon Master is crafting your fate",
+    "aiPleaseWait": "Please wait...",
+    "quickLook": "Look",
+    "quickAttack": "Attack",
+    "quickBag": "Bag",
+    "quickHero": "Hero",
+    "quickTalk": "Talk",
+    "quickRest": "Rest",
+    "quickSearch": "Search",
+    "quickMove": "Move",
+    "quickDefend": "Defend"
   },
   "character": {
     "title": "Character Sheet",

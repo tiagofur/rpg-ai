@@ -12,7 +12,7 @@ const ATTRIBUTE_KEYS = [
 ] as const;
 const ATTRIBUTE_LEVELS = ["Alta", "Media", "Baja"] as const;
 
-const CLASS_SKILLS: Record<string, ReadonlyArray<string>> = {
+export const CLASS_SKILLS: Record<string, ReadonlyArray<string>> = {
   Guerrero: ["Ataque Poderoso", "Intimidación", "Armas Marciales", "Atletismo"],
   Mago: ["Arcanos", "Conocimiento Histórico", "Trucos", "Concentración"],
   Pícaro: ["Sigilo", "Juego de Manos", "Percepción", "Acrobacias"],
@@ -21,7 +21,7 @@ const CLASS_SKILLS: Record<string, ReadonlyArray<string>> = {
   Clérigo: ["Religión", "Sanación", "Arcanos", "Persuasión"]
 };
 
-const CLASS_ITEMS: Record<string, ReadonlyArray<string>> = {
+export const CLASS_ITEMS: Record<string, ReadonlyArray<string>> = {
   Guerrero: ["Espada Bastarda", "Escudo Reforzado", "Cota de Malla", "Ración de Viaje"],
   Mago: ["Bastón Arcano", "Grimorio", "Componentes Arcanos", "Capa con Runas"],
   Pícaro: ["Dos Dagas", "Ganzúas", "Capa Oscura", "Frascos de Tinta"],
@@ -96,4 +96,16 @@ export function generateCharacterSheet(prompt: string, seed: number): CharacterS
     inventario,
     estado: "Saludable"
   };
+}
+
+// Generate skills for a specific class (used for direct character creation)
+export function generateSkillsForClass(clase: string, seed: number): string[] {
+  const rng = createSeededRng(seed);
+  return pickUnique(CLASS_SKILLS[clase] ?? [], 3, rng);
+}
+
+// Generate inventory for a specific class (used for direct character creation)
+export function generateInventoryForClass(clase: string, seed: number): string[] {
+  const rng = createSeededRng(seed);
+  return pickUnique(CLASS_ITEMS[clase] ?? [], 3, rng);
 }

@@ -12,6 +12,8 @@ export interface Character {
         current: number;
         maximum: number;
     };
+    status?: string[];
+    nextLevelExperience?: number;
     attributes: {
         strength: number;
         dexterity: number;

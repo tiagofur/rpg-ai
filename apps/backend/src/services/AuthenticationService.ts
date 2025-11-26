@@ -3,8 +3,8 @@ import bcrypt from 'bcrypt';
 import { authenticator } from 'otplib';
 import qrcode from 'qrcode';
 import { randomBytes } from 'node:crypto';
-import { Redis } from 'ioredis';
 import { PrismaClient } from '@prisma/client';
+import type { IRedisClient } from '../cache/interfaces/IRedisClient.js';
 import { UserRepository } from '../repositories/UserRepository.js';
 import { GameError as AppError } from '../errors/GameError.js';
 import {
@@ -47,7 +47,7 @@ export interface IRefreshTokenPayload {
 export interface IAuthConfig {
   jwtSecret: string;
   jwtRefreshSecret: string;
-  redis: Redis;
+  redis: IRedisClient;
   bcryptRounds: number;
   maxLoginAttempts: number;
   lockoutDuration: number;
@@ -88,7 +88,7 @@ export interface ITemporaryMfaData {
 export class AuthenticationService {
   private readonly config: IAuthConfig;
 
-  private readonly redis: Redis;
+  private readonly redis: IRedisClient;
 
   public userRepository: UserRepository;
 
@@ -129,7 +129,7 @@ export class AuthenticationService {
       username,
       password: hashedPassword,
       role: UserRole.USER,
-      status: AuthStatus.PENDING_VERIFICATION
+      status: AuthStatus.ACTIVE // TODO: Change back to PENDING_VERIFICATION when email service is ready
     });
 
     // Generar token de verificación de email
@@ -173,7 +173,7 @@ export class AuthenticationService {
         };
       }
 
-      const isMFATokenValid = await this.verifyMFAToken(user.mfaSecret!, mfaToken);
+      const isMFATokenValid = await this.verifyMFAToken(user.mfaSecret ?? '', mfaToken);
       if (!isMFATokenValid) {
         await this.recordFailedLogin(user);
         throw new AuthError('Invalid MFA token', ErrorCode.INVALID_CREDENTIALS);
